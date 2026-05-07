@@ -1,20 +1,17 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Faces of Polygon
 
-# Run and deploy your AI Studio app
+A minimalist fintech-inspired team dashboard for Polygon Technology.
 
-This contains everything you need to run your app locally.
+## 🚀 Project Overview
+This is a personal assignment focused on UI/UX branding and automated team management. The site dynamically pulls team data from Google Sheets and displays headshots hosted on Vercel.
 
-View your app in AI Studio: https://ai.studio/apps/07b2546e-1a4c-48f5-908c-b2b6882f9696
+## 🛠️ Tech Stack
+- **Framework:** React + Vite
+- **Deployment:** Vercel
+- **Database:** Google Sheets (CSV Integration)
+- **Branding:** Polygon Technology Aesthetic
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🔄 Automation Workflow
+1. Add photos to `/public/faces`.
+2. Update Google Sheet with filenames.
+3. Run `sync` command in PowerShell to deploy.
