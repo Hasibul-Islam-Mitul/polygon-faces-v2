@@ -1,0 +1,17 @@
+{
+  "short_name": "Polygon Faces",
+  "name": "Faces of Polygon Technology",
+  "icons": [
+    {
+      "src": "app_icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b0e14",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#66bc7b"
+}

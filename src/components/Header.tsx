@@ -3,13 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Users, Home, Info, MapPin, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Users, Home, Info, Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function Header() {
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
@@ -31,6 +33,7 @@ export default function Header() {
           </div>
         </Link>
 
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -62,8 +65,51 @@ export default function Header() {
           >
             Official Website
           </a>
+
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 text-white hover:bg-white/5 rounded-lg transition-colors"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-[#0b0e14] border-b border-white/5 overflow-hidden"
+          >
+            <div className="px-4 py-6 space-y-2">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={cn(
+                      "w-full px-5 py-4 rounded-xl text-base font-bold transition-all flex items-center gap-4",
+                      isActive 
+                        ? "bg-[#66bc7b] text-[#0b0e14]" 
+                        : "text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    <Icon size={20} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
