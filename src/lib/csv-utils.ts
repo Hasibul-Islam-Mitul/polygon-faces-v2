@@ -47,7 +47,8 @@ export async function fetchEmployeeData(): Promise<Employee[]> {
               role,
               quote,
               photoLink,
-              // Prepend /faces/ to the filename from CSV as requested
+              // User requested: src={'/faces/' + employee.PhotoLink}
+              // Filenames in CSV are like rakib-marketing.jpg
               image: photoLinkRaw.startsWith('http') ? photoLinkRaw : `/faces/${photoLink}`,
               linkedin: row.linkedin || row.Linkedin || '',
               twitter: row.twitter || row.Twitter || '',

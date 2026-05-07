@@ -29,17 +29,13 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
   };
 
   const ImageContent = ({ className, showInitials = false }: { className: string, showInitials?: boolean }) => {
-    // Determine the image source
-    let imgSrc = '';
-    if (employee.photoLink) {
-      imgSrc = employee.photoLink.startsWith('http') 
-        ? employee.photoLink 
-        : `/faces/${employee.photoLink.toLowerCase()}`;
-    } else {
-      imgSrc = employee.image; // fallback to whatever is in image
-    }
+    // Construct the image source exactly as requested: /faces/ + photoLink
+    const photoLink = employee.photoLink || '';
+    const imgSrc = photoLink.startsWith('http') 
+      ? photoLink 
+      : `/faces/${photoLink}`;
 
-    if (imageError || !imgSrc || imgSrc.endsWith('undefined') || imgSrc.endsWith('/faces/')) {
+    if (imageError || !photoLink || imgSrc.endsWith('undefined') || imgSrc.endsWith('/faces/')) {
       return (
         <div className={cn("bg-[#1a1f2e] flex items-center justify-center text-white/20 select-none", className)}>
           <span className={cn("font-black tracking-tighter", showInitials ? "text-6xl" : "text-3xl")}>
