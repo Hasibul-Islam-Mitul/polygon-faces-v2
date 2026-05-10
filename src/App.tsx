@@ -10,6 +10,7 @@
 
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import Header from './components/Header';
 import Home from './pages/Home';
 import AboutContact from './pages/AboutContact';
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/developer" element={<Developer />} />
           </Routes>
         </main>
+        <Analytics />
         
         <footer className="bg-[#080a0f] border-t border-white/5 py-20 px-4">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 items-start text-center md:text-left">
