@@ -47,7 +47,7 @@ export default function App() {
                 <span className="text-xl font-bold tracking-tighter">Polygon Technology</span>
               </div>
               <p className="text-white/40 text-sm leading-relaxed max-w-xs mx-auto md:mx-0">
-                Specialized Fintech and Information Technology firm headquartered in Dhaka, Bangladesh.
+                Meet Our People.
               </p>
             </div>
 
@@ -70,7 +70,7 @@ export default function App() {
           
           <div className="max-w-7xl mx-auto pt-12 mt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/20 text-[10px] uppercase tracking-[0.2em]">© 2026 Polygon Technology Limited. All Rights Reserved.</p>
-            <p className="text-white/20 text-[10px] uppercase tracking-[0.2em]">Crafted for Fintech Branding</p>
+            <p className="text-white/20 text-[10px] uppercase tracking-[0.2em]">Made by Mitul.</p>
           </div>
         </footer>
       </div>

@@ -43,11 +43,7 @@ export default function Home() {
   };
 
   const services = [
-    "Build Your Tech Team",
-    "Software Maintenance",
-    "UI/UX Design",
-    "Software Development",
-    "IT Staff Augmentation"
+    
   ];
 
   return (
