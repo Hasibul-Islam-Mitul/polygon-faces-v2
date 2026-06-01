@@ -78,7 +78,7 @@ export default function Home() {
             transition={{ delay: 0.1 }}
             className="text-white/60 text-lg md:text-2xl max-w-2xl mb-12 leading-relaxed"
           >
-            Regional Fintech & IT Powerhouse in Bangladesh. Engineering high-performance merchant systems and digital infrastructure.
+           Meet Our People.
           </motion.p>
 
           <div className="flex flex-wrap justify-center gap-3 mb-16 max-w-3xl">
