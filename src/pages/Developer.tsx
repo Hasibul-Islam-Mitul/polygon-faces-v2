@@ -4,12 +4,13 @@
  */
 
 import { motion } from 'motion/react';
-import { Github, Linkedin, ExternalLink, Calendar, User, Briefcase, Palette, Instagram, Globe } from 'lucide-react';
+import { Github, Linkedin, Calendar, Briefcase, Palette, Instagram, Globe, Quote } from 'lucide-react';
 
 export default function Developer() {
   return (
     <div className="min-h-screen bg-[#0b0e14] pt-32 pb-20 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-12">
+        {/* Profile Card */}
         <div className="bg-[#131722] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl relative">
           {/* Decorative background */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#66bc7b]/10 blur-[100px] pointer-events-none" />
@@ -47,7 +48,7 @@ export default function Developer() {
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="inline-flex mx-auto md:mx-0 items-center gap-2 px-3 py-1 rounded-full bg-[#66bc7b]/10 text-[#66bc7b] text-[10px] font-black uppercase tracking-[0.2em] mb-6"
+                className="inline-flex mx-auto md:mx-0 items-center gap-2 px-3 py-1 rounded-full bg-[#66bc7b]/10 text-[#66bc7b] text-[10px] font-black uppercase tracking-[0.2em] mb-6 animate-pulse"
               >
                 <Palette size={12} /> Technical Graphics intern
               </motion.div>
@@ -56,7 +57,7 @@ export default function Developer() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tighter leading-none text-center md:text-left"
+                className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter leading-none text-center md:text-left"
               >
                 MD. Hasibul <br />
                 Islam Mitul
@@ -89,11 +90,51 @@ export default function Developer() {
           </div>
         </div>
 
-        <div className="mt-12 text-center">
-            <p className="text-white/20 text-xs font-medium uppercase tracking-[0.3em]">Official Developer Profile • Faces of Polygon</p>
+        {/* Most Memorable Experience Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-[#131722] border border-white/5 rounded-[3rem] p-8 md:p-16 relative overflow-hidden shadow-2xl"
+        >
+          {/* Accent glow */}
+          <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-[#66bc7b]/5 blur-[80px] pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#66bc7b]/10 rounded-xl flex items-center justify-center text-[#66bc7b]">
+                <Quote size={20} />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">
+                Most Memorable Experience
+              </h2>
+            </div>
+            
+            <div className="w-full h-[1px] bg-white/10 my-2" />
+
+            <div className="relative">
+              {/* Giant quote sign background */}
+              <span className="absolute -top-10 -left-4 text-[12rem] font-sans font-black text-white/[0.02] select-none pointer-events-none leading-none">
+                “
+              </span>
+              
+              <p className="text-white/80 text-base md:text-lg leading-relaxed md:leading-loose text-justify font-normal pl-4 border-l-2 border-[#66bc7b]/20 relative z-10">
+                "On my very first day as an intern, I never expected what was coming. Asad Bhai asked me about my co-curricular activities, and when I mentioned I was a Scout, he had me demonstrating loud commands and parade drills right there! I gave it my all, but then he said he wasn't fully satisfied, <span className="text-[#66bc7b] font-bold">You have to dance now.</span> After some hilarious bargaining (I really wanted that selfie for the website!), I gave in and tried some steps to a Bengali song. I was so shy and nervous doing some steps to a Bengali song, but looking back, it was the perfect ice-breaker. That moment instantly washed away all my anxiety, helped introduce me to almost the entire team, and made me feel immediately at home. I’ve worked in other places before, but the work culture and the people here are unmatched. It was the perfect, unforgettable start to my journey, and I’m proud to say I became one of his favorite juniors (well, at least I like to think so!)."
+              </p>
+            </div>
+            
+            <div className="mt-4 flex items-center justify-end gap-3 text-white/40 text-xs font-mono uppercase tracking-widest">
+              <span>— Day One Onboarding</span>
+              <span className="w-1.5 h-1.5 bg-[#66bc7b] rounded-full animate-ping" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Footer info label */}
+        <div className="text-center pt-4">
+            <p className="text-white/25 text-xs font-medium uppercase tracking-[0.3em]">Official Developer Profile • Faces of Polygon</p>
         </div>
       </div>
     </div>
   );
 }
-
