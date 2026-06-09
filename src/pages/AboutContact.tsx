@@ -3,16 +3,37 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { motion } from 'motion/react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Mail, MapPin, Globe, Shield, Zap, Target } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+// Multi-image sequence read sequentially from public path
+const GALLERY_IMAGES = [
+  '/cover.png',
+  '/img1.jpeg',
+  '/img2.jpeg',
+  '/img3.jpeg',
+  '/img4.jpg'
+];
 
 export default function AboutContact() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const values = [
     { title: 'Fintech First', desc: 'Building seamless Merchant Onboarding ecosystems.', icon: Zap },
     { title: 'Regional Focus', desc: 'Serving the growing digital economy of Bangladesh.', icon: Globe },
     { title: 'Brand Identity', desc: 'Crafting high-end visual systems for enterprises.', icon: Target },
     { title: 'Technical Excellence', desc: 'High-performance digital infrastructure.', icon: Shield },
   ];
+
+  // Rotate images automatically every 4.5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % GALLERY_IMAGES.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div id="about-page-container" className="min-h-screen bg-[#0b0e14] pt-32 pb-20 px-4">
@@ -46,19 +67,46 @@ export default function AboutContact() {
               ))}
             </div>
           </div>
-          <div className="flex-1 relative">
-            <div className="aspect-[4/3] bg-[#131722] border-2 border-[#65bc7b]/30 group-hover:border-[#65bc7b] rounded-[3rem] overflow-hidden relative group shadow-[0_0_30px_rgba(101,188,123,0.15)] transition-all duration-500">
-                {/* Office cover.png with premium hover scale and subtle glowing border */}
-                <img 
-                  src="/cover.png" 
-                  alt="Polygon Technology Team" 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+          
+          {/* HIGH-FIDELITY ACTIVE MULTI-IMAGE GALLERY DECK CONTAINER */}
+          <div className="flex-1 relative w-full">
+            <div className="aspect-[4/3] bg-[#131722] border-2 border-[#65bc7b]/30 rounded-[3rem] overflow-hidden relative shadow-[0_0_40px_rgba(101,188,123,0.15)] select-none">
+              <AnimatePresence mode="wait">
+                <motion.img 
+                  key={currentImageIndex}
+                  src={GALLERY_IMAGES[currentImageIndex]} 
+                  alt={`Polygon Technology Gallery ${currentImageIndex + 1}`} 
+                  initial={{ opacity: 0, scale: 1.05 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.75, ease: [0.4, 0, 0.2, 1] }} // smooth luxurious frame interpolation crossfade
+                  className="absolute inset-x-0 inset-y-0 w-full h-full object-cover" 
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
                   }}
                 />
-                <div className="absolute inset-0 bg-[#65bc7b]/10 mix-blend-overlay group-hover:bg-[#65bc7b]/0 transition-all duration-500" />
+              </AnimatePresence>
+              <div className="absolute inset-0 bg-[#65bc7b]/5 mix-blend-overlay pointer-events-none" />
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0b0e14]/60 to-transparent pointer-events-none" />
+
+              {/* Sequential slide navigation dots */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-20 bg-[#0b0e14]/85 backdrop-blur-md px-4.5 py-2.5 rounded-full border border-white/5">
+                {GALLERY_IMAGES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      idx === currentImageIndex 
+                        ? "bg-[#65bc7b] w-6" 
+                        : "bg-white/20 hover:bg-white/40"
+                    )}
+                    aria-label={`Show gallery image ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </div>
+            
             {/* Ambient emerald backlight aura */}
             <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-[#65bc7b]/15 rounded-full blur-[100px] pointer-events-none" />
           </div>
@@ -111,7 +159,7 @@ export default function AboutContact() {
           </div>
 
           <div className="h-[500px] bg-[#131722] border border-[#65bc7b]/20 rounded-[3rem] overflow-hidden relative shadow-2xl group transition-all duration-500 hover:border-[#65bc7b]/40">
-              {/* High-Fidelity Accent Tinted Google Maps iframe */}
+              {/* High-Fidelity Google Maps iframe */}
               <div className="w-full h-full select-none overflow-hidden relative">
                 <iframe 
                   id="google-maps-frame"
@@ -122,7 +170,7 @@ export default function AboutContact() {
                   loading="lazy" 
                   referrerPolicy="no-referrer-when-downgrade"
                 ></iframe>
-                {/* Brand Tint Overlay using mix-blend-color for a sleek custom tactical vibe */}
+                {/* Brand Tint Overlay */}
                 <div className="absolute inset-0 bg-[#65bc7b]/10 mix-blend-color pointer-events-none group-hover:bg-transparent transition-all duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14] via-transparent to-[#0b0e14]/40 pointer-events-none" />
               </div>

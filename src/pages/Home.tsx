@@ -4,7 +4,7 @@
  */
 
 import { Link } from 'react-router-dom';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowRight, 
@@ -16,14 +16,32 @@ import {
   X, 
   Star, 
   TrendingUp, 
-  Smile, 
-  Sparkles, 
-  Layers 
+  Smile 
 } from 'lucide-react';
 import { fetchEmployeeData, shuffleArray } from '../lib/csv-utils';
 import { Employee } from '../types';
 import EmployeeCard from '../components/EmployeeCard';
 import { cn } from '../lib/utils';
+
+// Sarcastic Bengali roasts system
+const BENGALI_ROASTS = [
+  "Chhobi chara dynamic UI? Eto bhalo coding jani na bhai!",
+  "Frame khali! Back-end database bodhoy apnake khujche!",
+  "Chhobi tola ki strictly confidential naki bhai? :))",
+  "Chhobi dile crash khabe na, crush khabe!",
+  "Chhobi chara profile dekhte thiki database error er moto lage!",
+  "Chhobi chara employee? System-e to compile korche na!"
+];
+
+const getRoastForEmployee = (id: string | number) => {
+  const str = String(id);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % BENGALI_ROASTS.length;
+  return BENGALI_ROASTS[index];
+};
 
 // Centralised static categories schema matching brand guidelines
 const CATEGORIES_SCHEMA = [
@@ -60,12 +78,15 @@ export default function Home() {
   const [botImageError, setBotImageError] = useState(false);
 
   // States for interactive stats & quotes
-  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string | null>(null);
-  const [hoveredDept, setHoveredDept] = useState<string | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<{ name: string; keywords: string[] } | null>(null);
 
   const featuredTalentRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftState, setScrollLeftState] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -86,6 +107,92 @@ export default function Home() {
     }
   };
 
+  // Carousel Slow Horizontal Autoplay logic + full drag support + mouse hover pauses
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || loading || employees.length === 0) return;
+    
+    let animationFrameId: number;
+    let lastTime = performance.now();
+    
+    const scroll = (time: number) => {
+      if (!isCarouselHovered && !isDragging && el) {
+        const elapsed = time - lastTime;
+        el.scrollLeft += 0.03 * elapsed; // Slowly shift leftward
+        
+        // Loop back to start if scrolled near edge
+        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 2) {
+          el.scrollLeft = 0;
+        }
+      }
+      lastTime = time;
+      animationFrameId = requestAnimationFrame(scroll);
+    };
+    
+    animationFrameId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isCarouselHovered, isDragging, loading, employees]);
+
+  // Support sideways scroll gesture via desktop vertical mouse wheel inside the container
+  const handleCarouselWheel = (e: React.WheelEvent) => {
+    const el = carouselRef.current;
+    if (el) {
+      if (e.deltaY !== 0) {
+        el.scrollLeft += e.deltaY;
+      }
+    }
+  };
+
+  // Click & Drag support for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    setIsDragging(true);
+    setStartX(e.pageX - el.offsetLeft);
+    setScrollLeftState(el.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setIsCarouselHovered(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const el = carouselRef.current;
+    if (!el) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5; 
+    el.scrollLeft = scrollLeftState - walk;
+  };
+
+  // Touch Swipe support for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    setIsDragging(true);
+    setStartX(e.touches[0].pageX - el.offsetLeft);
+    setScrollLeftState(el.scrollLeft);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const el = carouselRef.current;
+    if (!el) return;
+    const x = e.touches[0].pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    el.scrollLeft = scrollLeftState - walk;
+  };
+
   // Floating line-art hexagons matching hollow Polygon logo geometry
   const floatingHexagons = [
     { id: 1, left: "8%", top: "12%", size: 65, duration: 24, delay: 0, x: [0, 35, -20, 0], y: [0, -45, 25, 0] },
@@ -102,69 +209,90 @@ export default function Home() {
     { id: 12, left: "65%", top: "88%", size: 70, duration: 27, delay: 0.3, x: [0, 30, -30, 0], y: [0, -30, 30, 0] }
   ];
 
-  // 1. Dynamic Ecosystem / Department Breakdown Calculations
-  const departmentCounts = useMemo(() => {
-    const counts: { [key: string]: number } = {};
-    employees.forEach(emp => {
-      const dept = emp.department || 'Operations';
-      counts[dept] = (counts[dept] || 0) + 1;
-    });
+  // Highly engaging floating photo nodes that drift smoothly in non-linear, unpredictable organic motions
+  const floatingPhotoNodes = useMemo(() => {
+    if (employees.length === 0) return [];
+    const pool = employees.filter(e => e.photoLink && !e.photoLink.includes('none'));
+    const sourceList = pool.length > 5 ? pool : employees;
+    
+    const nodes = [];
+    const count = Math.min(15, sourceList.length || 1);
+    for (let i = 0; i < count; i++) {
+      const emp = sourceList[i % sourceList.length];
+      
+      const startX = 5 + (i * 90 / count) + (Math.sin(i) * 3); 
+      const startY = 12 + ((i * 17) % 65); 
+      
+      const dx = [0, (Math.sin(i) * 45), (Math.cos(i) * -40), 0];
+      const dy = [0, (Math.cos(i) * -45), (Math.sin(i) * 40), 0];
+      const duration = 24 + (i * 3) % 20; 
+      const delay = (i * 1.3) % 4;
+      const size = 55 + (i * 7) % 35; 
+      const borderColor = i % 2 === 0 ? '#65bc7b' : '#8247e5';
 
-    const total = employees.length || 1;
-    return Object.entries(counts).map(([name, count]) => ({
-      name,
-      count,
-      percentage: Math.round((count / total) * 100),
-    })).sort((a, b) => b.count - a.count);
+      nodes.push({
+        id: `drift-${emp.id}-${i}`,
+        employee: emp,
+        style: {
+          left: `${startX}%`,
+          top: `${startY}%`,
+          width: size,
+          height: size,
+        },
+        animate: {
+          x: dx,
+          y: dy,
+          rotate: [0, i % 2 === 0 ? 30 : -35, i % 2 === 0 ? -30 : 35, 0],
+          scale: [1, 1.1, 0.9, 1]
+        },
+        duration,
+        delay,
+        borderColor
+      });
+    }
+    return nodes;
   }, [employees]);
 
-  // Displayed members list based on selected department filter on-the-fly
-  const displayedMembers = useMemo(() => {
-    if (!selectedDeptFilter) {
-      return employees.slice(0, 8);
-    }
-    return employees.filter(emp => (emp.department || 'Operations') === selectedDeptFilter);
-  }, [employees, selectedDeptFilter]);
+  // Dynamic department slices for Employee Distribution Chart (Chart 1)
+  const departmentSlices = useMemo(() => {
+    const total = employees.length || 1;
+    const countsMap: { [key: string]: number } = {};
+    employees.forEach(emp => {
+      const dept = emp.department || 'Operations';
+      countsMap[dept] = (countsMap[dept] || 0) + 1;
+    });
 
-  // Handle department row selection with auto smooth scrolling
-  const handleDeptSelect = (deptName: string) => {
-    const nextFilter = selectedDeptFilter === deptName ? null : deptName;
-    setSelectedDeptFilter(nextFilter);
-    if (nextFilter) {
-      setTimeout(() => {
-         featuredTalentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    }
-  };
-
-  // Chart A Colors: Mapped distinct, high-contrast unique colors
-  const chartAColors = ['#8247e5', '#65bc7b', '#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#14b8a6'];
-
-  // Chart A (Ecosystem) calculation parameters (circumference: 238.76 for radius: 38)
-  const pieSlices = useMemo(() => {
-    const totalCount = departmentCounts.reduce((sum, item) => sum + item.count, 0) || 1;
-    let accumulatedFraction = 0;
-    return departmentCounts.map((dept, index) => {
-      const fraction = dept.count / totalCount;
-      const strokeLength = fraction * 238.76;
-      const strokeOffset = 238.76 - strokeLength;
-      const rotation = accumulatedFraction * 360;
-      accumulatedFraction += fraction;
-      
+    const depts = Object.keys(countsMap).sort();
+    const chartColors = ['#8247e5', '#3b82f6', '#ec4899', '#f97316', '#06b6d4', '#65bc7b'];
+    const computed = depts.map((name, index) => {
+      const count = countsMap[name];
+      const percentage = Math.round((count / total) * 100);
       return {
-        ...dept,
-        strokeOffset,
-        rotation,
-        color: chartAColors[index % chartAColors.length]
+        ...CATEGORIES_SCHEMA[index % CATEGORIES_SCHEMA.length], 
+        name,
+        count,
+        percentage,
+        color: chartColors[index % chartColors.length]
       };
     });
-  }, [departmentCounts]);
 
-  // Centralized Sentiment/Quote Categorization Engine (Single Source of Truth)
+    let cumulative = 0;
+    return computed.map(item => {
+      const currentCumulative = cumulative;
+      cumulative += (item.count / total) * 100;
+      return {
+        ...item,
+        cumulativePercentageBefore: currentCumulative,
+        cumulativePercentageAfter: cumulative,
+        strokeOffset: 100 - cumulative
+      };
+    });
+  }, [employees]);
+
+  // Centralised Sentiment/Quote Categorization Engine (Chart 2)
   const sentimentSlices = useMemo(() => {
     const total = employees.length || 1;
     
-    // Initialize counts dynamically using keys conforming to the schema
     const countsMap: { [key: string]: number } = {
       'Culture': 0,
       'Tech & Architecture': 0,
@@ -187,7 +315,8 @@ export default function Home() {
                           quote === 'na' || 
                           quote === 'n/a' || 
                           quote === 'n/a.' || 
-                          quote.includes('no comment');
+                          quote.includes('no comment') ||
+                          quote.includes('no comments');
 
       if (isNoComment) {
         countsMap['No Comments']++;
@@ -222,13 +351,11 @@ export default function Home() {
         return;
       }
 
-      // Any remaining non-placeholder fall back to generic
       countsMap['Others']++;
     });
 
     const chartBColors = ['#65bc7b', '#8247e5', '#3b82f6', '#ec4899', '#f97316', '#06b6d4'];
 
-    // Map each schema element back with computed count and percentage of total employees
     const computed = CATEGORIES_SCHEMA.map((cat, index) => {
       const count = countsMap[cat.name] || 0;
       const percentage = Math.round((count / total) * 100);
@@ -240,8 +367,6 @@ export default function Home() {
       };
     });
 
-    // To ensure pie chart slices are mathematically perfect, continuous and form exactly 100% of the circle,
-    // we use the cumulative percentage overlay method.
     let cumulative = 0;
     return computed.map(item => {
       const currentCumulative = cumulative;
@@ -256,11 +381,10 @@ export default function Home() {
     });
   }, [employees]);
 
-  // Dynamic semantic filtering for the modal popup with matching keyword extraction
+  // Dynamic semantic filtering with robust matching logic
   const categoryQuotes = useMemo(() => {
     if (!selectedCategory) return [];
     
-    // Select precisely the employees that were categorized into this category
     return employees.filter(emp => {
       const quote = (emp.quote || '').trim().toLowerCase();
       
@@ -274,7 +398,8 @@ export default function Home() {
                           quote === 'na' || 
                           quote === 'n/a' || 
                           quote === 'n/a.' || 
-                          quote.includes('no comment');
+                          quote.includes('no comment') ||
+                          quote.includes('no comments');
       
       let assignedCategory = 'Others';
       
@@ -301,7 +426,6 @@ export default function Home() {
     });
   }, [employees, selectedCategory]);
 
-  // Fallback avatar helper inside modal lists
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -312,13 +436,22 @@ export default function Home() {
   };
 
   return (
-    <div id="home-page-root" className="min-h-screen bg-[#0b0e14] relative">
+    <div id="home-page-root" className="min-h-screen bg-[#0b0e14] relative overflow-hidden">
       
-      {/* 1. FUTURISTIC AMBIENT BLURRED BACKDROP WITH FLOATING OUTLINE HEXAGONS */}
-      <div className="absolute inset-x-0 top-0 h-[800px] overflow-hidden pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0b0e14]/50 to-[#0b0e14] z-10" />
+      {/* Cinematic Ambient Backdrop Wrapper with video feed and geometric floating hex outlines */}
+      <div className="absolute inset-x-0 top-0 h-[850px] overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0b0e14]/60 to-[#0b0e14] z-10" />
         
-        {/* Floating Line-Art SVG Hexagons based on official geometry */}
+        {/* Cinematic Video Background Muted, Mapped loop */}
+        <video 
+          src="/hero-bg.mp4" 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none z-0"
+        />
+
         {floatingHexagons.map((hex) => (
           <motion.div
             key={hex.id}
@@ -353,17 +486,55 @@ export default function Home() {
           </motion.div>
         ))}
 
-        {/* Ambient background accent glows */}
+        {/* Ambient Backlight glows */}
         <div className="absolute w-[350px] h-[350px] bg-[#8247e5]/10 top-[20%] left-[20%] filter blur-[100px]" />
         <div className="absolute w-[400px] h-[400px] bg-[#65bc7b]/8 top-[10%] right-[15%] filter blur-[120px]" />
-
-        {/* Technical dot grid backdrop */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]" />
+
+        {/* Dynamic organically floating photo nodes drifting gracefully */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto">
+          {floatingPhotoNodes.map((node) => (
+            <motion.div
+              key={node.id}
+              className="absolute rounded-full border-2 bg-[#131722]/85 overflow-hidden shadow-2xl flex items-center justify-center cursor-pointer hover:border-[#65bc7b] hover:scale-125 hover:z-30 transition-transform duration-300 group"
+              style={{
+                ...node.style,
+                borderColor: node.borderColor,
+              }}
+              animate={node.animate}
+              transition={{
+                duration: node.duration,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: node.delay,
+              }}
+              onClick={() => {
+                setSelectedBot(node.employee);
+                setBotImageError(false);
+              }}
+            >
+              <img 
+                src={node.employee.photoLink && !node.employee.photoLink.includes('none') ? (node.employee.photoLink.startsWith('http') ? node.employee.photoLink : `/faces/${node.employee.photoLink}`) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'} 
+                alt={node.employee.name} 
+                className="w-full h-full object-cover filter grayscale contrast-125 group-hover:grayscale-0 group-hover:scale-110 transition-all duration-300 pointer-events-none" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150';
+                }}
+              />
+              <div className="absolute inset-0 bg-[#65bc7b]/5 mix-blend-color pointer-events-none" />
+              
+              {/* Floating micro tag labels */}
+              <div className="absolute inset-x-0 bottom-0 py-0.5 bg-black/75 text-center text-[7px] font-mono text-white/50 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest truncate max-w-full">
+                {node.employee.name.split(' ')[0]}
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       {/* Hero Content Section */}
-      <div className="relative pt-48 pb-20 px-4 overflow-hidden z-10">
-        <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
+      <div className="relative pt-44 pb-16 px-4 z-10 overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col items-center">
           
           {/* Compact Brand Logo Framing Container */}
           <motion.div
@@ -378,29 +549,20 @@ export default function Home() {
               className="w-full h-full object-cover scale-110 absolute inset-0 transition-transform duration-500 hover:scale-120" 
             />
           </motion.div>
-          
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-9xl font-black text-white leading-none mb-6 tracking-tighter"
-          >
-            FACES OF <br />
-            <span className="text-[#65bc7b] italic">POLYGON</span>
-          </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-white/60 text-lg md:text-2xl max-w-2xl mb-12 leading-relaxed"
+            className="text-white/70 text-lg md:text-2xl max-w-2xl text-center mt-6 mb-12 leading-relaxed font-sans font-medium tracking-tight"
           >
-            Meet Our People.
+            Meet our people and learn about our culture.
           </motion.p>
 
-          <div className="flex flex-col sm:flex-row gap-6 mt-4">
+          <div className="flex flex-col sm:flex-row gap-6">
              <Link
                 to="/directory"
-                className="group flex items-center justify-center gap-3 bg-[#65bc7b] text-[#0b0e14] px-10 py-5 rounded-[2.5rem] font-black text-lg transition-all hover:scale-105 shadow-2x shadow-[#65bc7b]/20"
+                className="group flex items-center justify-center gap-3 bg-[#65bc7b] text-[#0b0e14] px-10 py-5 rounded-[2.5rem] font-black text-lg transition-all hover:scale-105 shadow-2xl shadow-[#65bc7b]/20"
               >
                 View Full Directory
                 <Users size={20} />
@@ -416,9 +578,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Employee / Team Grid Section */}
-      <section ref={featuredTalentRef} id="featured-talent" className="relative max-w-7xl mx-auto px-4 pb-32 z-10 scroll-mt-24">
-         <div className="flex flex-col items-center mb-16 text-center">
+      {/* Employee / High-End Interactive Slideshow Carousel Section */}
+      <section ref={featuredTalentRef} id="featured-talent" className="relative max-w-7xl mx-auto px-4 pb-28 z-10 scroll-mt-24">
+         <div className="flex flex-col items-center mb-10 text-center">
             <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -427,41 +589,17 @@ export default function Home() {
                 <div className="bg-[#65bc7b] p-1.5 rounded-lg text-[#0b0e14]">
                     <Star size={14} fill="currentColor" />
                 </div>
-                <span className="text-white text-[10px] font-black uppercase tracking-widest leading-none">
+                <span className="text-white text-[10px] font-black uppercase tracking-widest leading-none font-mono">
                     Onboarding Milestone: <span className="text-[#65bc7b]">MD. Hasibul Islam Mitul</span> has engaged with {employees.length} people.
                 </span>
             </motion.div>
 
-            <h2 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter">
-              {selectedDeptFilter ? (
-                <>Ecosystem: <span className="text-[#65bc7b]">{selectedDeptFilter}</span></>
-              ) : (
-                <>Featured <span className="text-[#65bc7b]">Talent</span></>
-              )}
-            </h2>
-            <p className="text-white/40 text-lg max-w-xl">
-              {selectedDeptFilter 
-                ? `Displaying all mapped team members operating in our ${selectedDeptFilter} division.`
-                : "Meet the visionaries behind Bangladesh's leading fintech infrastructure."}
-            </p>
-
-            {/* Filter active notification badge */}
-            {selectedDeptFilter && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-mono"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-[#65bc7b] animate-pulse" />
-                <span className="text-white/70">Department filter is active</span>
-                <button 
-                  onClick={() => setSelectedDeptFilter(null)}
-                  className="ml-3 font-bold text-[#ff7597] hover:text-white uppercase text-[10px] tracking-wide underline decoration-dotted transition-colors"
-                >
-                  Clear filter
-                </button>
-              </motion.div>
-            )}
+            {/* Hyper-Minimalist Tag replacing heavy Core Personnel title */}
+            <div className="inline-block bg-[#131722] border border-white/5 px-6 py-2.5 rounded-full shadow-lg">
+                <span className="text-sm font-mono font-black text-[#65bc7b] uppercase tracking-[0.35em]">
+                  Polybots
+                </span>
+            </div>
         </div>
 
         {loading ? (
@@ -471,33 +609,41 @@ export default function Home() {
             </div>
         ) : (
             <>
-                <motion.div 
-                  layout
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16"
+                {/* Horizontal Auto-scrolling Interlocking Carousel wrapper */}
+                <div 
+                  id="featured-talent-carousel-container"
+                  className="relative w-full overflow-hidden"
+                  onMouseEnter={() => setIsCarouselHovered(true)}
+                  onMouseLeave={handleMouseLeave}
                 >
-                  <AnimatePresence mode="popLayout">
-                    {displayedMembers.map((emp, idx) => (
-                      <motion.div 
+                  <div 
+                    ref={carouselRef}
+                    onWheel={handleCarouselWheel}
+                    onMouseDown={handleMouseDown}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchMove}
+                    className="flex overflow-x-auto gap-8 pb-8 snap-x snap-mandatory cursor-grab active:cursor-grabbing scrollbar-none scroll-smooth select-none"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {employees.map((emp, idx) => (
+                      <div 
                         key={emp.id} 
-                        layout 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.4 }}
+                        className="min-w-[280px] sm:min-w-[310px] snap-center flex-shrink-0"
                       >
                         <EmployeeCard employee={emp} index={idx} />
-                      </motion.div>
+                      </div>
                     ))}
-                  </AnimatePresence>
-                </motion.div>
-
-                {displayedMembers.length === 0 && (
-                  <div className="p-16 border border-dashed border-white/10 rounded-[2.5rem] bg-white/[0.01] text-center mb-16">
-                    <p className="text-white/30 text-lg">No employees found matching this criteria.</p>
                   </div>
-                )}
 
-                <div className="text-center">
+                  {/* Gradient shadow edges to make the carousel fade elegantly into background */}
+                  <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none z-10" />
+                  <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none z-10" />
+                </div>
+
+                <div className="text-center mt-12">
                     <Link to="/directory" className="inline-flex items-center gap-2 text-[#65bc7b] font-black uppercase tracking-widest hover:translate-x-3 transition-transform group">
                         Enter Full Ecosystem <ArrowRight size={20} className="group-hover:text-white transition-colors" />
                     </Link>
@@ -506,342 +652,261 @@ export default function Home() {
         )}
       </section>
 
-      {/* 2. Team Insights & Re-Architected Dual Data Analytics Section */}
-      <section className="relative max-w-7xl mx-auto px-4 pb-32 z-10 border-t border-white/5 pt-28">
+      {/* 2. Team & Quotes Proportions Section */}
+      <section className="relative max-w-7xl mx-auto px-4 pb-32 z-10 border-t border-white/5 pt-24">
         <div className="flex flex-col items-center mb-16 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#65bc7b]/10 text-[#65bc7b] rounded-full text-[10px] mb-4 font-black tracking-widest uppercase">
             <TrendingUp size={12} /> Live Statistical Matrix
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter">
-            Team Insights & <span className="text-[#65bc7b]">Analytics</span>
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter uppercase">
+            Team & Quotes Proportions
           </h2>
-          <p className="text-white/40 text-lg max-w-xl">
-            Real-time aggregate telemetry of roles and qualitative cultural metrics inside Polygon Bangladesh.
+          <p className="text-white/40 text-sm max-w-xl font-normal leading-relaxed">
+            Real-time aggregate data visualization of cultural topics and personnel distribution within Polygon Technologies.
           </p>
         </div>
 
-        {/* TOP LAYOUT: SIDE BY SIDE LISTS (No cramped pie charts here!) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch mb-12">
+        {/* Side-by-Side Dual Donut Charts Cleaned and Perfectly Symmetrical Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch max-w-5xl mx-auto">
           
-          {/* Component A: Department distribution (Bars list only) */}
-          <div id="stats-departments-container" className="bg-[#131722] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-[#65bc7b]/5 blur-[80px] pointer-events-none" />
+          {/* Chart 1: Employee Distribution Chart */}
+          <div id="employee-distribution-container" className="bg-[#131722] border border-white/5 rounded-[3rem] p-10 md:p-14 shadow-2xl relative overflow-hidden flex flex-col items-center justify-between min-h-[460px]">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#8247e5]/5 blur-[80px] pointer-events-none" />
             
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-[#65bc7b]/10 rounded-xl flex items-center justify-center text-[#65bc7b]">
-                  <Layers size={18} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight">Ecosystem Distribution</h3>
-                  <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Interactive dashboard: Click rows to filter employee grid instantly</p>
-                </div>
-              </div>
-
-              <div className="w-full h-[1px] bg-white/10 my-6" />
-
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="py-12 text-center text-white/30 text-sm">Aggregating records...</div>
-                ) : (
-                  departmentCounts.map((dept, index) => {
-                    const isActive = selectedDeptFilter === dept.name;
-                    const sliceColor = pieSlices.find(s => s.name === dept.name)?.color || '#65bc7b';
-                    
-                    return (
-                      <div 
-                        key={dept.name}
-                        onClick={() => handleDeptSelect(dept.name)}
-                        onMouseEnter={() => setHoveredDept(dept.name)}
-                        onMouseLeave={() => setHoveredDept(null)}
-                        className={cn(
-                          "p-3.5 rounded-xl border border-transparent transition-all cursor-pointer flex flex-col gap-1.5",
-                          isActive 
-                            ? "bg-[#65bc7b]/10 border-[#65bc7b]/30" 
-                            : "hover:bg-white/[0.03] hover:border-white/5"
-                        )}
-                      >
-                        <div className="flex justify-between items-center font-mono">
-                          <span className="text-white/95 text-xs font-bold flex items-center gap-2">
-                            <span 
-                              className="w-2.5 h-2.5 rounded-full filter" 
-                              style={{ 
-                                backgroundColor: sliceColor, 
-                                boxShadow: hoveredDept === dept.name ? `0 0 10px ${sliceColor}` : 'none' 
-                              }} 
-                            />
-                            {dept.name}
-                          </span>
-                          <span className="text-white/40 text-[10px] font-bold">
-                            {dept.count} members ({dept.percentage}%)
-                          </span>
-                        </div>
-                        
-                        <div className="w-full h-1.5 bg-[#0b0e14] rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            whileInView={{ width: `${dept.percentage}%` }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 1, delay: index * 0.05 }}
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: sliceColor }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+            <div className="text-center w-full">
+              <h3 className="text-2xl font-black text-white tracking-tight uppercase">Employee Distribution</h3>
+              <p className="text-white/40 text-[9px] font-mono uppercase tracking-wider mt-1.5">
+                Personnel node matrix
+              </p>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] text-white/30 font-mono tracking-wider uppercase">
-              <span>Relational Linkages: Stable</span>
-              <span>Total Nodes: {employees.length}</span>
-            </div>
-          </div>
-
-          {/* Component B: Categorized Quotes Sentiment (Bars list only) */}
-          <div id="stats-categories-container" className="bg-[#131722] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 blur-[80px] pointer-events-none" />
-
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400">
-                  <Smile size={18} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight">Categorized Quotes</h3>
-                  <p className="text-white/40 text-[10px] font-medium uppercase tracking-wider">Interactive auditing: Click any card to load matched employees</p>
-                </div>
-              </div>
-
-              <div className="w-full h-[1px] bg-white/10 my-6" />
-
-              <div className="space-y-4">
-                {sentimentSlices.map((slice) => {
-                  const matchCount = slice.count;
-                  const ratio = slice.percentage;
-                  const sliceColor = slice.color;
-
+            {/* Donut graphic with accentuated size indicators */}
+            <div className="relative w-60 h-60 md:w-64 md:h-64 flex items-center justify-center my-6 shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="38" stroke="#0c0e14" strokeWidth="11" fill="transparent" />
+                
+                {[...departmentSlices].reverse().filter(s => s.count > 0).map((slice, index) => {
+                  const isHovered = hoveredCategory === slice.name;
                   return (
-                    <motion.div 
-                      key={slice.name} 
-                      whileHover={{ scale: 1.015 }}
-                      transition={{ type: 'spring', stiffness: 450, damping: 12 }}
-                      onClick={() => setSelectedCategory({ name: slice.name, keywords: slice.keywords })}
-                      className="p-4 bg-[#0b0e14]/50 hover:bg-[#0b0e14] border border-white/5 hover:border-blue-500/20 rounded-2xl flex flex-col gap-2 cursor-pointer transition-all"
-                    >
-                      <div className="flex justify-between items-center font-mono">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sliceColor }} />
-                          <span className="text-white font-bold text-xs uppercase tracking-wider">{slice.name}</span>
-                        </div>
-                        <span className="text-blue-400 text-xs font-bold font-mono">
-                          {matchCount > 0 ? `${ratio}% (${matchCount})` : '0% (No quotes recorded)'}
-                        </span>
-                      </div>
-                      
-                      <div className="w-full h-1.5 bg-[#0b0e14] rounded-full overflow-hidden mt-1">
-                        <div 
-                           className="h-full rounded-full transition-all duration-500" 
-                           style={{ 
-                             width: `${Math.max(ratio, matchCount > 0 ? 1 : 0)}%`,
-                             backgroundColor: sliceColor
-                           }}
-                        />
-                      </div>
-                    </motion.div>
+                    <motion.circle
+                      key={slice.name}
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      fill="transparent"
+                      stroke={slice.color}
+                      strokeWidth={isHovered ? "14" : "10"}
+                      strokeDasharray="100 100"
+                      pathLength="100"
+                      initial={{ strokeDashoffset: 100 }}
+                      whileInView={{ strokeDashoffset: slice.strokeOffset }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 1.2, ease: "easeOut", delay: index * 0.08 }}
+                      className="transition-all duration-300 cursor-pointer"
+                      onMouseEnter={() => setHoveredCategory(slice.name)}
+                      onMouseLeave={() => setHoveredCategory(null)}
+                    />
                   );
                 })}
+              </svg>
+
+              {/* Accentuated Milestone text display upgraded is highly visible at a glance */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none">Departments</span>
+                <span className="text-5xl md:text-6xl font-black text-[#65bc7b] leading-none mt-2.5">{departmentSlices.length}</span>
+                <span className="text-[9px] font-mono text-white/40 mt-1.5 uppercase tracking-wider font-bold">Groups</span>
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-white/5 flex items-center gap-2 text-[10px] text-[#65bc7b] font-mono tracking-wider uppercase justify-end">
-              <Sparkles size={11} className="animate-pulse" />
-              <span>Real-time Semantic Analyzer Live</span>
+            {/* Interactive hovering helper text panel */}
+            <div className="h-6 text-center w-full">
+              <AnimatePresence mode="wait">
+                {hoveredCategory && departmentSlices.some(s => s.name === hoveredCategory) ? (
+                  <motion.p 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs font-mono font-bold text-[#65bc7b] tracking-wider uppercase"
+                  >
+                    {hoveredCategory}: {departmentSlices.find(s => s.name === hoveredCategory)?.percentage}% ({departmentSlices.find(s => s.name === hoveredCategory)?.count} members)
+                  </motion.p>
+                ) : (
+                  <p className="text-[10px] font-mono text-white/35 uppercase tracking-wider">
+                    Hover on slices to inspect coordinates
+                  </p>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
-        </div>
-
-        {/* BOTTOM LAYOUT: WIDER DEDICATED LAYOUT CONTAINER FOR DUAL INTERACTIVE PIE CHARTS */}
-        <div id="dual-pie-charts-container" className="bg-[#131722] border border-white/5 rounded-[3rem] p-10 md:p-16 shadow-2xl relative overflow-hidden">
-          <div className="text-center mb-12">
-            <span className="inline-block py-1.5 px-3.5 bg-white/5 border border-white/10 rounded-full font-mono text-[9px] uppercase tracking-widest text-white/50 mb-3">
-              Advanced Visualization Portal
-            </span>
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter">
-              Interactive Team & Sentiment <span className="text-[#65bc7b]">Proportions</span>
-            </h3>
-            <p className="text-white/40 text-xs mt-1">
-              Click slices inside either visualizer system to activate corresponding telemetry filters or popups.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+          {/* Chart 2: Sentiment Proportions Chart (Update specific header to "Categorized Quotes") */}
+          <div id="stats-categories-standalone-container" className="bg-[#131722] border border-white/5 rounded-[3rem] p-10 md:p-14 shadow-2xl relative overflow-hidden flex flex-col items-center justify-between min-h-[460px]">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#65bc7b]/5 blur-[80px] pointer-events-none" />
             
-            {/* Visualizer A: Department distribution pie chart */}
-            <div className="flex flex-col items-center">
-              <h4 className="text-sm font-bold uppercase tracking-widest font-mono text-white/60 mb-8 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#65bc7b]" /> Ecosystem Density Ratio
-              </h4>
-              
-              <div className="relative w-64 h-64 md:w-72 md:h-72">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="38" stroke="#0b0e14" strokeWidth="12" fill="transparent" />
-                  
-                  {pieSlices.map((slice, index) => {
-                    const isHovered = hoveredDept === slice.name || selectedDeptFilter === slice.name;
-                    return (
-                      <motion.circle
-                        key={slice.name}
-                        cx="50"
-                        cy="50"
-                        r="38"
-                        fill="transparent"
-                        stroke={slice.color}
-                        strokeWidth={isHovered ? "14" : "10"}
-                        strokeDasharray="238.76"
-                        initial={{ strokeDashoffset: 238.76 }}
-                        whileInView={{ strokeDashoffset: slice.strokeOffset }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 1.2, ease: "easeOut", delay: index * 0.08 }}
-                        style={{
-                          transform: `rotate(${slice.rotation}deg)`,
-                          transformOrigin: '50px 50px',
-                        }}
-                        className="transition-all duration-300 cursor-pointer"
-                        onMouseEnter={() => setHoveredDept(slice.name)}
-                        onMouseLeave={() => setHoveredDept(null)}
-                        onClick={() => handleDeptSelect(slice.name)}
-                      />
-                    );
-                  })}
-                </svg>
+            <div className="text-center w-full">
+              <h3 className="text-2xl font-black text-white tracking-tight uppercase">Categorized Quotes</h3>
+              <p className="text-white/40 text-[9px] font-mono uppercase tracking-wider mt-1.5">
+                Feedback semantic segmentation
+              </p>
+            </div>
 
-                {/* Total staff indicator centered inside */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                  <span className="text-[10px] font-black uppercase text-white/40 tracking-widest leading-none">Departments</span>
-                  <span className="text-4xl font-black text-white leading-none mt-1.5">{employees.length}</span>
-                  <span className="text-[9px] font-mono text-[#65bc7b] mt-1.5 uppercase tracking-wider font-bold">People</span>
-                </div>
-              </div>
+            {/* Donut graphic with accentuated size indicators */}
+            <div className="relative w-60 h-60 md:w-64 md:h-64 flex items-center justify-center my-6 shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="38" stroke="#0c0e14" strokeWidth="11" fill="transparent" />
+                
+                {[...sentimentSlices].reverse().filter(s => s.count > 0).map((slice, index) => {
+                  const isHovered = hoveredCategory === slice.name;
+                  return (
+                    <motion.circle
+                      key={slice.name}
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      fill="transparent"
+                      stroke={slice.color}
+                      strokeWidth={isHovered ? "14" : "10"}
+                      strokeDasharray="100 100"
+                      pathLength="100"
+                      initial={{ strokeDashoffset: 100 }}
+                      whileInView={{ strokeDashoffset: slice.strokeOffset }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 1.2, ease: "easeOut", delay: index * 0.08 }}
+                      className="transition-all duration-300 cursor-pointer"
+                      onMouseEnter={() => setHoveredCategory(slice.name)}
+                      onMouseLeave={() => setHoveredCategory(null)}
+                      onClick={() => setSelectedCategory({ name: slice.name, keywords: slice.keywords })}
+                    />
+                  );
+                })}
+              </svg>
 
-              {/* Legend/Selector metadata */}
-              <div className="mt-8 text-center h-6">
-                <AnimatePresence mode="wait">
-                  {(hoveredDept || selectedDeptFilter) ? (
-                    <motion.p 
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="text-xs font-mono font-bold text-[#65bc7b] tracking-wider uppercase"
-                    >
-                      {hoveredDept || selectedDeptFilter} (Click to Filter)
-                    </motion.p>
-                  ) : (
-                    <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-                      Hover on slices to inspect
-                    </p>
-                  )}
-                </AnimatePresence>
+              {/* Accentuated Milestone text display upgraded is highly visible at a glance */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none">Feedback</span>
+                <span className="text-5xl md:text-6xl font-black text-[#8247e5] leading-none mt-2.5">{employees.length}</span>
+                <span className="text-[9px] font-mono text-white/40 mt-1.5 uppercase tracking-wider font-bold">Total Quotes</span>
               </div>
             </div>
 
-            {/* Visualizer B: Sentiment Categories distribution pie chart */}
-            <div className="flex flex-col items-center">
-              <h4 className="text-sm font-bold uppercase tracking-widest font-mono text-white/60 mb-8 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500" /> Sentiment Category Ratio
-              </h4>
-
-              <div className="relative w-64 h-64 md:w-72 md:h-72">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="38" stroke="#0b0e14" strokeWidth="12" fill="transparent" />
-                  
-                  {[...sentimentSlices].reverse().filter(s => s.count > 0).map((slice, index) => {
-                    const isHovered = hoveredCategory === slice.name;
-                    return (
-                      <motion.circle
-                        key={slice.name}
-                        cx="50"
-                        cy="50"
-                        r="38"
-                        fill="transparent"
-                        stroke={slice.color}
-                        strokeWidth={isHovered ? "14" : "10"}
-                        strokeDasharray="100 100"
-                        pathLength="100"
-                        initial={{ strokeDashoffset: 100 }}
-                        whileInView={{ strokeDashoffset: slice.strokeOffset }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 1.2, ease: "easeOut", delay: index * 0.08 }}
-                        className="transition-all duration-300 cursor-pointer"
-                        onMouseEnter={() => setHoveredCategory(slice.name)}
-                        onMouseLeave={() => setHoveredCategory(null)}
-                        onClick={() => setSelectedCategory({ name: slice.name, keywords: slice.keywords })}
-                      />
-                    );
-                  })}
-                </svg>
-
-                {/* Total comments stats centered inside */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                  <span className="text-[10px] font-black uppercase text-white/40 tracking-widest leading-none">Categorization</span>
-                  <span className="text-4xl font-black text-white leading-none mt-1.5">
-                    {sentimentSlices.reduce((sum, item) => sum + item.count, 0)}
-                  </span>
-                  <span className="text-[9px] font-mono text-blue-400 mt-1.5 uppercase tracking-wider font-bold">Quotes</span>
-                </div>
-              </div>
-
-              {/* Legend/Selector metadata */}
-              <div className="mt-8 text-center h-6">
-                <AnimatePresence mode="wait">
-                  {hoveredCategory ? (
-                    <motion.p 
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="text-xs font-mono font-bold text-blue-400 tracking-wider uppercase"
-                    >
-                      {hoveredCategory} (Click to Audit)
-                    </motion.p>
-                  ) : (
-                    <p className="text-[10px] font-mono text-white/30 uppercase tracking-widest">
-                      Hover on slices to inspect
-                    </p>
-                  )}
-                </AnimatePresence>
-              </div>
+            {/* Interactive hovering helper text panel */}
+            <div className="h-6 text-center w-full">
+              <AnimatePresence mode="wait">
+                {hoveredCategory && sentimentSlices.some(s => s.name === hoveredCategory) ? (
+                  <motion.p 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs font-mono font-bold text-[#8247e5] tracking-wider uppercase cursor-pointer"
+                    onClick={() => {
+                      const s = sentimentSlices.find(x => x.name === hoveredCategory);
+                      if (s) setSelectedCategory({ name: s.name, keywords: s.keywords });
+                    }}
+                  >
+                    {hoveredCategory}: {sentimentSlices.find(s => s.name === hoveredCategory)?.percentage}% (Audit logs)
+                  </motion.p>
+                ) : (
+                  <p className="text-[10px] font-mono text-white/35 uppercase tracking-wider">
+                    Click segments to audit feedback logs
+                  </p>
+                )}
+              </AnimatePresence>
             </div>
-
           </div>
+
         </div>
       </section>
 
-      {/* Stats Section */}
-      <div className="bg-[#080a0f] border-y border-white/5 py-24 px-4 z-10 relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12">
+      {/* Fun Office Stats Board - Clean Elegant Overhaul with Local Images */}
+      <div id="polygon-telemetry-fun-stats" className="bg-[#080a0f] border-y border-white/5 py-24 px-4 z-10 relative overflow-hidden">
+        {/* Subtle grid backdrop decoration */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(101,188,123,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto p-0 md:p-6">
+          <div className="text-center mb-16">
+            <h3 className="text-xs font-mono font-bold text-[#65bc7b] uppercase tracking-[0.3em] mb-3">Live HQ Metrics</h3>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight uppercase">Ecosystem Weird Metrics</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-                { label: 'Users Impacted', value: '50M+', icon: Users },
-                { label: 'Products Delivered', value: '70+', icon: Zap },
-                { label: 'Happy Clients', value: '50M+', icon: Shield },
-                { label: 'Years Experience', value: '3+', icon: Globe },
-            ].map((stat, i) => (
-                <div key={i} className="flex flex-col items-center md:items-start gap-5">
-                    <div className="p-4 bg-[#65bc7b]/10 rounded-2xl text-[#65bc7b]">
-                        <stat.icon size={28} />
-                    </div>
-                    <div>
-                        <p className="text-5xl font-black text-white tracking-tighter mb-2">{stat.value}</p>
-                        <p className="uppercase text-[10px] font-black tracking-[0.4em] text-white/40">{stat.label}</p>
-                    </div>
+              { 
+                label: 'Caffeine Engine', 
+                value: '340+ Cups / Day', 
+                subtext: 'Fueled entirely by syntax errors.',
+                image: '/coffee.png',
+                glow: 'shadow-[0_0_20px_rgba(101,188,123,0.12)] border-[#65bc7b]/15 text-[#65bc7b]' 
+              },
+              { 
+                label: 'The Great Escapes', 
+                value: '42 Outings / Hour', 
+                subtext: 'Frequent unexpected disappearances to the washroom or lawn.',
+                image: '/bunk.png',
+                glow: 'shadow-[0_0_20px_rgba(130,71,229,0.12)] border-[#8247e5]/15 text-[#8247e5]' 
+              },
+              { 
+                label: 'Chief Security Officer', 
+                value: 'Doglus', 
+                subtext: 'Patrolling the corridors for dropped snacks.',
+                image: '/doglus.png',
+                glow: 'shadow-[0_0_20px_rgba(59,130,246,0.12)] border-blue-500/15 text-blue-400' 
+              },
+              { 
+                label: 'Head of Employee Wellness', 
+                value: 'Milo', 
+                subtext: 'Sleeping through 100% of critical production deployments.',
+                image: '/milo.png',
+                glow: 'shadow-[0_0_20px_rgba(236,72,153,0.12)] border-pink-500/15 text-pink-400' 
+              },
+            ].map((card, i) => (
+              <motion.div 
+                key={i}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className={cn(
+                  "p-8 bg-[#131722]/90 backdrop-blur-md rounded-[2.5rem] border flex flex-col justify-between min-h-[290px] transition-all relative overflow-hidden",
+                  card.glow
+                )}
+              >
+                {/* Visual glow element */}
+                <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.05] bg-current filter blur-2xl rounded-full pointer-events-none" />
+
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shrink-0 flex items-center justify-center shadow-inner">
+                    <img 
+                      src={card.image} 
+                      alt={card.label} 
+                      className="w-full h-full object-cover rounded-xl scale-105" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/55 leading-none block">{card.label}</span>
+                  </div>
                 </div>
+
+                <div className="mt-8 mb-4">
+                  <p className="text-3xl font-black text-white tracking-tight mb-2 uppercase">{card.value}</p>
+                  <p className="text-xs text-white/50 leading-relaxed font-normal">{card.subtext}</p>
+                </div>
+
+                <div className="w-full h-1 bg-current opacity-20 rounded-full overflow-hidden shrink-0 mt-3">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    whileInView={{ width: '100%' }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1.5, delay: i * 0.2 }}
+                    className="h-full bg-current" 
+                  />
+                </div>
+              </motion.div>
             ))}
+          </div>
         </div>
       </div>
 
-      {/* PolyBot Modal */}
+      {/* PolyBot Widescreen Landscape Modal */}
       <AnimatePresence>
         {selectedBot && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
@@ -852,55 +917,92 @@ export default function Home() {
               onClick={() => setSelectedBot(null)}
               className="absolute inset-0 bg-[#0b0e14]/90 backdrop-blur-md"
             />
+            
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-sm bg-[#131722] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl"
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              className="relative w-full max-w-3xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[420px] aspect-auto md:aspect-[16/10] lg:aspect-[16/9] z-50"
             >
-              <div className="aspect-square relative overflow-hidden">
-                {botImageError || !selectedBot.photoLink ? (
-                  <div className="w-full h-full bg-[#1a1f2e] flex items-center justify-center text-white/20 select-none relative">
-                     {/* Standard profile frame avatar with custom gradient background circle inside PolyBot fallback */}
-                     <div 
-                       className="w-24 h-24 rounded-full flex items-center justify-center"
-                       style={{ background: 'linear-gradient(135deg, #8a3ffc 0%, #65bc7b 100%)' }}
-                     >
-                       <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                       </svg>
-                     </div>
+              {/* Left Column: Portrait image or Sarcastic Bengali Roast Fallback */}
+              <div className="md:w-[35%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-center justify-center p-8 select-none shrink-0">
+                {selectedBot.photoLink && !selectedBot.photoLink.includes('none') && !botImageError ? (
+                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-full border-2 border-[#65bc7b] overflow-hidden relative shadow-2xl">
+                    <img 
+                      src={selectedBot.photoLink.startsWith('http') ? selectedBot.photoLink : `/faces/${selectedBot.photoLink}`} 
+                      alt={selectedBot.name} 
+                      className="w-full h-full object-cover" 
+                      onError={() => setBotImageError(true)}
+                    />
                   </div>
                 ) : (
-                  <img 
-                    src={selectedBot.photoLink.startsWith('http') ? selectedBot.photoLink : `/faces/${selectedBot.photoLink}`} 
-                    alt={selectedBot.name} 
-                    className="w-full h-full object-cover" 
-                    onError={() => setBotImageError(true)}
-                  />
+                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] border-2 border-[#ff3e6c]/35 flex flex-col items-center justify-center p-4 text-center">
+                    <span className="px-2 py-0.5 bg-[#ff3e6c]/10 rounded text-[7px] font-mono font-black text-[#ff3e6c] uppercase tracking-wider mb-2">[ DATA_EMPTY ]</span>
+                    {/* Fallback Bengali corporate tech roasts matching alternatingly based on employee indexes */}
+                    <p className="text-white/85 font-mono text-[9px] leading-tight italic">
+                      "{getRoastForEmployee(selectedBot.id)}"
+                    </p>
+                  </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0e14] via-transparent to-transparent opacity-80" />
+                
                 <button 
                   onClick={() => setSelectedBot(null)}
-                  className="absolute top-6 right-6 p-2.5 bg-black/40 hover:bg-white/10 rounded-full text-white transition-colors"
+                  className="absolute top-6 left-6 p-2 bg-black/40 hover:bg-white/15 rounded-full text-white transition-colors md:hidden"
                 >
-                  <X size={20} />
+                  <X size={16} />
                 </button>
               </div>
-              <div className="p-10 text-center">
-                <p className="text-[#65bc7b] text-[10px] font-black uppercase tracking-[0.3em] mb-3">{selectedBot.department}</p>
-                <h3 className="text-3xl font-black text-white mb-2 tracking-tighter">{selectedBot.name}</h3>
-                <p className="text-white/60 font-bold mb-8 italic">{selectedBot.role}</p>
-                <div className="p-5 bg-white/5 rounded-2xl mb-8 border border-white/5">
-                   <p className="text-white/40 text-sm leading-relaxed italic">"{selectedBot.quote}"</p>
+
+              {/* Right Column: Detailed Designation with massive quote and balanced typographic hierarchy */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative">
+                <button 
+                  onClick={() => setSelectedBot(null)}
+                  className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors hidden md:block"
+                >
+                  <X size={16} />
+                </button>
+
+                <div className="flex flex-col gap-6">
+                  {/* Compact code tag chip for Name at the very top */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-1 bg-[#65bc7b]/10 border border-[#65bc7b]/20 rounded-md text-[9px] font-mono font-bold text-[#65bc7b] uppercase tracking-wide">
+                      OP_TAG: {selectedBot.name}
+                    </span>
+                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-[9px] font-mono font-medium text-white/50 uppercase tracking-widest">
+                      ID_NODE: {selectedBot.id}
+                    </span>
+                  </div>
+
+                  {/* Designated department and description lines below with balanced layout margins */}
+                  <div>
+                    <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight uppercase leading-none">
+                      {selectedBot.role}
+                    </h3>
+                    <p className="text-[#65bc7b] text-xs font-black uppercase tracking-widest mt-2">
+                      {selectedBot.department} DEPARTMENT
+                    </p>
+                  </div>
+
+                  {/* Massively sized employee quote block taking up the majority of the landscape modal center */}
+                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden">
+                    <div className="absolute top-2 left-3 font-mono text-[8px] text-[#65bc7b]/40 uppercase tracking-widest">[ SENTIMENT_STATEMENT ]</div>
+                    <p className="text-2xl md:text-3xl font-black text-white leading-relaxed italic tracking-tight text-left pt-2">
+                      "{selectedBot.quote || 'No comment recorded.'}"
+                    </p>
+                  </div>
                 </div>
-                <button 
-                  onClick={() => setSelectedBot(null)}
-                  className="w-full bg-[#65bc7b] text-[#0b0e14] py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-all"
-                >
-                  Close PolyBot
-                </button>
+
+                <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <span className="font-mono text-[8px] text-white/30 uppercase tracking-widest">Widescreen Polybot v2.5</span>
+                  <button 
+                    onClick={() => setSelectedBot(null)}
+                    className="bg-[#65bc7b] text-[#0b0e14] px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </div>
+
             </motion.div>
           </div>
         )}
@@ -922,15 +1024,15 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-2xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[80vh] relative z-50"
+              className="relative w-full max-w-2xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[80vh] z-50"
             >
               {/* Modal header details */}
               <div className="p-8 pb-4 border-b border-white/5 flex justify-between items-start gap-4">
                 <div>
-                  <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest mb-1 font-mono">
+                  <div className="flex items-center gap-2 text-[#8247e5] text-[10px] font-black uppercase tracking-widest mb-1 font-mono">
                     <Smile size={12} fill="currentColor" /> Category Match Vector
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter">{selectedCategory.name}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">{selectedCategory.name}</h3>
                 </div>
                 <button 
                   onClick={() => setSelectedCategory(null)}
@@ -940,49 +1042,52 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Scrollable list of actual feedback statements matching definitions dynamically */}
+              {/* Scrollable list of actual feedback statements */}
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 {categoryQuotes.length === 0 ? (
                   <div className="text-center py-12 text-white/30 text-sm font-mono leading-relaxed">
                     No exact logs found in records matching this category's filter logic.
                   </div>
                 ) : (
-                  categoryQuotes.map((emp) => (
-                    <div key={emp.id} className="p-5 bg-[#0b0e14]/80 border border-white/5 rounded-2xl flex flex-col gap-4 shadow-lg">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-10 h-10 rounded-full overflow-hidden border border-white/10 bg-[#1c2130] flex items-center justify-center"
-                          style={{
-                            background: emp.photoLink ? 'transparent' : 'linear-gradient(135deg, #8a3ffc 0%, #65bc7b 100%)'
-                          }}
-                        >
-                          {emp.photoLink ? (
-                            <img 
-                              src={emp.photoLink.startsWith('http') ? emp.photoLink : `/faces/${emp.photoLink}`} 
-                              alt={emp.name} 
-                              className="w-full h-full object-cover" 
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <span className="text-xs font-mono font-bold text-white">
-                              {getInitials(emp.name)}
-                            </span>
-                          )}
+                  categoryQuotes.map((emp) => {
+                    const hasValidPhoto = emp.photoLink && !emp.photoLink.includes('none');
+                    return (
+                      <div key={emp.id} className="p-5 bg-[#0b0e14]/80 border border-white/5 rounded-2xl flex flex-col gap-4 shadow-lg">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center animate-pulse"
+                            style={{
+                              background: hasValidPhoto ? 'transparent' : 'linear-gradient(135deg, #131722 0%, #0b0e14 100%)'
+                            }}
+                          >
+                            {hasValidPhoto ? (
+                              <img 
+                                src={emp.photoLink.startsWith('http') ? emp.photoLink : `/faces/${emp.photoLink}`} 
+                                alt={emp.name} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-xs font-mono font-bold text-[#ff3e6c]">
+                                {getInitials(emp.name)}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-white font-black text-sm leading-none">{emp.name}</p>
+                            <p className="text-white/40 text-[10px] font-medium mt-1.5 uppercase tracking-wider">{emp.role} // {emp.department}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-white font-black text-sm leading-none">{emp.name}</p>
-                          <p className="text-white/40 text-[10px] font-medium mt-1 uppercase tracking-wider">{emp.role} // {emp.department}</p>
-                        </div>
-                      </div>
 
-                      {/* Highlighted matching quote */}
-                      <p className="text-white/70 italic text-sm leading-relaxed border-l-2 border-[#65bc7b]/40 pl-4 py-1">
-                        "{emp.quote || 'No comment recorded.'}"
-                      </p>
-                    </div>
-                  ))
+                        {/* Highlighted matching quote */}
+                        <p className="text-white/70 italic text-sm leading-relaxed border-l-2 border-[#65bc7b]/40 pl-4 py-1">
+                          "{emp.quote || 'No comment recorded.'}"
+                        </p>
+                      </div>
+                    );
+                  })
                 )}
               </div>
 

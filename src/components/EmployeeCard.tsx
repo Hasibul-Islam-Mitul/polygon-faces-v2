@@ -15,6 +15,25 @@ interface EmployeeCardProps {
   key?: string | number;
 }
 
+const BENGALI_ROASTS = [
+  "Chhobi chara dynamic UI? Eto bhalo coding jani na bhai!",
+  "Chobi tulen nai? Back-end database bodhoy apnakei khujche!",
+  "Chhobi tola ki strictly confidential naki bhai? senti khelam :))",
+  "Chhobi dile crash khabe na, crush khabe!",
+  "Chhobi chara profile dekhte thiki database error er moto lage!",
+  "Chhobi chara employee? System-e to compile korche na!"
+];
+
+const getRoastForEmployee = (id: string | number) => {
+  const str = String(id);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % BENGALI_ROASTS.length;
+  return BENGALI_ROASTS[index];
+};
+
 export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -34,13 +53,13 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
       hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
     const gradients = [
-      "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #65bc7b 100%)", // Slate charcoal with Polygon green
-      "linear-gradient(135deg, #090d16 0%, #111827 50%, #65bc7b 100%)", // Rich dark gray and Polygon green
-      "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #65bc7b 100%)", // Indigo overlay with Polygon green
-      "linear-gradient(135deg, #0f1c24 0%, #1d3557 60%, #65bc7b 100%)", // Deep navy blue with Polygon green
-      "linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #65bc7b 100%)", // Midnight blue and Polygon green
-      "linear-gradient(135deg, #1b4d3e 0%, #0b0e14 60%, #65bc7b 100%)", // Forest emerald deep slate with Polygon green
-      "linear-gradient(135deg, #070a0e 0%, #0f172a 50%, #65bc7b 100%)"  // Extreme dark charcoal with Polygon green
+      "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #65bc7b 100%)",
+      "linear-gradient(135deg, #090d16 0%, #111827 50%, #65bc7b 100%)",
+      "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #65bc7b 100%)",
+      "linear-gradient(135deg, #0f1c24 0%, #1d3557 60%, #65bc7b 100%)",
+      "linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #65bc7b 100%)",
+      "linear-gradient(135deg, #1b4d3e 0%, #0b0e14 60%, #65bc7b 100%)",
+      "linear-gradient(135deg, #070a0e 0%, #0f172a 50%, #65bc7b 100%)"
     ];
     const index = Math.abs(hash) % gradients.length;
     return gradients[index];
@@ -53,62 +72,33 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
       : `/faces/${photoLink}`;
 
     if (imageError || !photoLink || imgSrc.endsWith('undefined') || imgSrc.endsWith('/faces/')) {
-      // Procedural colorful gradient background based on department + name string length
-      const seedString = `${employee.name}-${employee.department || 'Operations'}-${employee.name.length}`;
-      const gradient = getGradientForString(seedString);
+      const roast = getRoastForEmployee(employee.id);
       return (
         <div 
           id={`avatar-card-container-${employee.id}`}
-          className={cn("relative flex items-center justify-center overflow-hidden group/avatar select-none transition-all duration-500 hover:scale-105", className)}
-          style={{ background: gradient }}
+          className={cn("relative flex flex-col items-center justify-center p-6 text-center overflow-hidden bg-gradient-to-br from-[#0c0f16] to-[#050608] border border-[#ff3e6c]/20 select-none transition-all duration-500 hover:scale-105", className)}
         >
-          {/* Animated Futuristic Tech Rings */}
+          {/* Subtle warning backdrop lines */}
+          <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#ff3e6c_1px,transparent_1px)] [background-size:16px_16px]" />
+          
+          {/* Hover neon pulse outline ring */}
           <motion.div 
             animate={{ rotate: 360 }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 border border-white/10 rounded-full m-4 pointer-events-none scale-105"
-          />
-          <motion.div 
-            animate={{ rotate: -360 }}
             transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 border border-dashed border-white/5 rounded-full m-8 pointer-events-none"
+            className="absolute inset-x-0 inset-y-0 border border-[#ff3e6c]/10 rounded-full m-8 pointer-events-none scale-105"
           />
-          
-          {/* Futuristic technical ID metadata label */}
-          <div className="absolute top-4 left-4 font-mono text-[8px] text-white/40 tracking-wider">
-            POLY_ID // {employee.id.substring(0, 5).toUpperCase()}
-          </div>
-          
-          {/* Circular abstract vector human contour with pulse hover frame */}
-          <div 
-            id={`avatar-fallback-${employee.id}`}
-            className="absolute w-28 h-28 md:w-32 md:h-32 rounded-full bg-white/5 border border-white/10 hover:border-[#65bc7b]/40 flex items-center justify-center backdrop-blur-[4px] transition-all duration-500 group-hover/avatar:scale-110 group-hover/avatar:border-[#65bc7b]/60 shadow-2xl overflow-hidden"
-          >
-            {/* Glowing tactical halo on hover */}
-            <span className="absolute inset-0 rounded-full border border-[#65bc7b]/0 group-hover/avatar:border-[#65bc7b]/20 group-hover/avatar:scale-105 transition-all duration-700 animate-pulse" />
 
-            {/* Clean, semi-transparent human profile vector silhouette */}
-            <svg 
-              className="absolute w-20 h-20 text-white/10 group-hover/avatar:text-white/20 transition-all duration-300 pointer-events-none"
-              fill="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-
-            {/* Employee's standard text initials rendered cleanly over or beside it */}
-            <span className="relative font-mono text-2xl md:text-3xl font-extrabold text-white/90 group-hover/avatar:text-white tracking-widest select-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] transition-all duration-300">
-              {getInitials(employee.name)}
+          {/* Sarcastic roast text */}
+          <div className="z-10 flex flex-col items-center gap-4 max-w-[95%]">
+            <span className="px-2.5 py-1 bg-[#ff3e6c]/10 rounded-md text-[8px] font-mono font-black text-[#ff3e6c] tracking-widest uppercase border border-[#ff3e6c]/20 animate-pulse">
+              [ NO_PHOTO_ERROR ]
             </span>
-
-            {/* Micro badge indicator inside frame */}
-            <div className="absolute bottom-3 font-mono text-[8px] font-black text-[#65bc7b] uppercase tracking-widest leading-none opacity-40 group-hover/avatar:opacity-100 transition-opacity duration-300">
-              {(employee.department || 'OPS').substring(0, 3)}
-            </div>
-          </div>
-
-          <div className="absolute bottom-4 right-4 font-mono text-[8px] text-white/30 tracking-tight">
-            DEPT // {(employee.department || 'OPS').substring(0, 3).toUpperCase()}
+            <p className="font-mono text-xs text-white/95 leading-relaxed italic border-l-2 border-[#ff3e6c]/40 pl-3">
+              "{roast}"
+            </p>
+            <span className="font-mono text-[9px] text-[#ff3e6c]/40 font-bold uppercase tracking-wider">
+              {getInitials(employee.name)} // ID: {employee.id.substring(0, 5).toUpperCase()}
+            </span>
           </div>
         </div>
       );

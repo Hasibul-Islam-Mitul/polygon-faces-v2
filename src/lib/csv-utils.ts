@@ -5,6 +5,7 @@
 
 import Papa from 'papaparse';
 import { Employee } from '../types';
+import backupData from './employees-backup.json';
 
 /**
  * Shuffles an array in place.
@@ -19,12 +20,39 @@ export function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
+ * Mapped offline fallback employees parsed from local JSON.
+ */
+const FALLBACK_EMPLOYEES: Employee[] = (backupData as any[]).map((row, index) => {
+  const name = row.Name || 'Anonymous';
+  const dept = row.Department || 'Operations';
+  const role = row.Role || 'Fintech Specialist';
+  const quote = row.Quote || '';
+  const photoLinkRaw = row.PhotoLink || '';
+  const photoLink = photoLinkRaw.trim().toLowerCase();
+
+  return {
+    id: row.id || `emp-${index}`,
+    name,
+    department: dept,
+    role,
+    quote,
+    photoLink,
+    image: photoLinkRaw.startsWith('http') ? photoLinkRaw : `/faces/${photoLink}`,
+    linkedin: row.linkedin || row.Linkedin || '',
+    twitter: row.twitter || row.Twitter || '',
+  };
+});
+
+/**
  * Fetches and parses employee data from a Google Sheets CSV export link.
  */
 export async function fetchEmployeeData(): Promise<Employee[]> {
   const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSYZD1Za-fzMOoF5mCJjI3wWaPSHj1IP0tU4EsV9mBr0LS-rkQM0hhJP3gxou9BjOKdFndMXLny-ksT/pub?output=csv';
   try {
     const response = await fetch(CSV_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     const csvContent = await response.text();
     
     return new Promise((resolve, reject) => {
@@ -62,40 +90,10 @@ export async function fetchEmployeeData(): Promise<Employee[]> {
       });
     });
   } catch (error) {
-    console.error('Error fetching CSV data:', error);
-    return MOCK_DATA;
+    console.error('Error fetching CSV data via network. Loading local cache...:', error);
+    return FALLBACK_EMPLOYEES;
   }
 }
 
-const MOCK_DATA: Employee[] = [
-  {
-    id: '1',
-    name: 'Rakib Marketing',
-    role: 'Marketing Lead',
-    department: 'Marketing',
-    image: '/faces/rakib-marketing.jpg',
-    quote: 'Driving Fintech adoption and brand identity for Polygon Technology.',
-    linkedin: 'https://www.linkedin.com/company/polygontechnology/',
-    twitter: '#'
-  },
-  {
-    id: 'developer-hasibul',
-    name: 'MD. Hasibul Islam Mitul',
-    role: 'Technical Graphics Intern',
-    department: 'Marketing',
-    image: '/pfp square.jpg',
-    quote: 'Specializing in visual identity and automated data systems.',
-    linkedin: 'https://www.linkedin.com/company/polygontechnology/',
-    twitter: '#'
-  },
-  {
-    id: '3',
-    name: 'Sayed Ahmed',
-    role: 'Merchant Onboarding Lead',
-    department: 'Fintech',
-    image: 'https://images.unsplash.com/photo-1519085184588-445694c9f116?auto=format&fit=crop&q=80&w=400',
-    quote: 'Bridging digital payments with real-world merchant ecosystems.',
-    linkedin: '#',
-    twitter: '#'
-  }
-];
+const MOCK_DATA: Employee[] = FALLBACK_EMPLOYEES;
+
