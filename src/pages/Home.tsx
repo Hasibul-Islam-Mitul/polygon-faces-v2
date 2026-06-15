@@ -15,7 +15,9 @@ import {
   TrendingUp, 
   Smile,
   Shield,
-  Zap
+  Zap,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { fetchEmployeeData, shuffleArray } from '../lib/csv-utils';
 import { Employee } from '../types';
@@ -110,6 +112,11 @@ export default function Home() {
   const [scrollLeftState, setScrollLeftState] = useState(0);
   const scrollPosRef = useRef(0);
 
+  // Robust slider interaction refs to prevent stutter and speed bursts
+  const isDraggingRef = useRef(false);
+  const lastInteractionTimeRef = useRef(0);
+  const draggedRef = useRef(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -146,7 +153,7 @@ export default function Home() {
     return [...employees, ...employees, ...employees];
   }, [employees]);
 
-  // Carousel Smooth Continuous Auto-scroll Horizontal Marquee
+  // Carousel Smooth Continuous Auto-scroll Horizontal Marquee with auto-resume
   useEffect(() => {
     const el = carouselRef.current;
     if (!el || loading || employees.length === 0) return;
@@ -155,44 +162,56 @@ export default function Home() {
     let lastTime = performance.now();
     
     const scroll = (time: number) => {
-      if (!isDragging && el) {
-        const elapsed = Math.min(time - lastTime, 50); // Prevent giant translation leaps of auto-scroll
+      const now = performance.now();
+      
+      // Auto-scrolling only runs if the user is not actively dragging or has interacted in the last 1500ms
+      if (!isDraggingRef.current && (now - lastInteractionTimeRef.current > 1500) && el) {
+        const elapsed = Math.min(time - lastTime, 50); // prevents giant jumps
         
-        // Relaxed, beautiful pace (0.025 pixels/ms is extremely relaxed and constant)
-        scrollPosRef.current += 0.025 * elapsed; 
+        // Steady, gentle right-to-left marquee scroll speed (0.025 pixels/ms)
+        el.scrollLeft += 0.025 * elapsed;
         
         const firstThird = el.scrollWidth / 3;
         const secondThird = firstThird * 2;
         
-        // Wrap-around seamlessly near container ends
-        if (scrollPosRef.current >= secondThird) {
-          scrollPosRef.current -= firstThird;
-        } else if (scrollPosRef.current <= 5) {
-          scrollPosRef.current += firstThird;
+        // Wrap-around seamlessly near container boundaries
+        if (el.scrollLeft >= secondThird) {
+          el.scrollLeft -= firstThird;
+        } else if (el.scrollLeft <= 20) {
+          el.scrollLeft += firstThird;
         }
-        
-        el.scrollLeft = scrollPosRef.current;
       }
+      
       lastTime = time;
       animationFrameId = requestAnimationFrame(scroll);
     };
     
     animationFrameId = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isDragging, loading, employees]);
+  }, [loading, employees.length]);
 
-  // Handle native scroll event to keep scrollPosRef in-sync when manual scrolling is ongoing
+  // Handle native scroll event to keep scrollPosRef and boundaries in check
   const handleCarouselScroll = () => {
     const el = carouselRef.current;
-    if (el && (isCarouselHovered || isDragging)) {
-      scrollPosRef.current = el.scrollLeft;
+    if (!el) return;
+    
+    const firstThird = el.scrollWidth / 3;
+    const secondThird = firstThird * 2;
+    
+    if (el.scrollLeft >= secondThird) {
+      el.scrollLeft -= firstThird;
+    } else if (el.scrollLeft <= 20) {
+      el.scrollLeft += firstThird;
     }
+    
+    scrollPosRef.current = el.scrollLeft;
   };
 
   // Support sideways scroll gesture via desktop vertical mouse wheel inside the container
   const handleCarouselWheel = (e: React.WheelEvent) => {
     const el = carouselRef.current;
     if (el) {
+      lastInteractionTimeRef.current = performance.now();
       if (e.deltaY !== 0) {
         el.scrollLeft += e.deltaY;
         scrollPosRef.current = el.scrollLeft;
@@ -205,28 +224,40 @@ export default function Home() {
     const el = carouselRef.current;
     if (!el) return;
     setIsDragging(true);
+    isDraggingRef.current = true;
+    draggedRef.current = false;
+    lastInteractionTimeRef.current = performance.now();
     setStartX(e.pageX - el.offsetLeft);
     setScrollLeftState(el.scrollLeft);
   };
 
   const handleMouseLeave = () => {
     setIsDragging(false);
-    setIsCarouselHovered(false);
+    isDraggingRef.current = false;
+    draggedRef.current = false;
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    isDraggingRef.current = false;
+    lastInteractionTimeRef.current = performance.now();
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     e.preventDefault();
     const el = carouselRef.current;
     if (!el) return;
     const x = e.pageX - el.offsetLeft;
     const walk = (x - startX) * 1.5; 
+    
+    if (Math.abs(walk) > 8) {
+      draggedRef.current = true;
+    }
+    
     el.scrollLeft = scrollLeftState - walk;
     scrollPosRef.current = el.scrollLeft;
+    lastInteractionTimeRef.current = performance.now();
   };
 
   // Touch Swipe support for mobile
@@ -234,24 +265,50 @@ export default function Home() {
     const el = carouselRef.current;
     if (!el) return;
     setIsDragging(true);
-    setIsCarouselHovered(true);
+    isDraggingRef.current = true;
+    draggedRef.current = false;
+    lastInteractionTimeRef.current = performance.now();
     setStartX(e.touches[0].pageX - el.offsetLeft);
     setScrollLeftState(el.scrollLeft);
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    setIsCarouselHovered(false);
+    isDraggingRef.current = false;
+    lastInteractionTimeRef.current = performance.now();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
     const el = carouselRef.current;
     if (!el) return;
     const x = e.touches[0].pageX - el.offsetLeft;
     const walk = (x - startX) * 1.5;
+    
+    if (Math.abs(walk) > 8) {
+      draggedRef.current = true;
+    }
+    
     el.scrollLeft = scrollLeftState - walk;
     scrollPosRef.current = el.scrollLeft;
+    lastInteractionTimeRef.current = performance.now();
+  };
+
+  // Sleek side navigation click handlers
+  const handlePrev = () => {
+    const el = carouselRef.current;
+    if (el) {
+      lastInteractionTimeRef.current = performance.now();
+      el.scrollBy({ left: -340, behavior: 'smooth' });
+    }
+  };
+
+  const handleNext = () => {
+    const el = carouselRef.current;
+    if (el) {
+      lastInteractionTimeRef.current = performance.now();
+      el.scrollBy({ left: 340, behavior: 'smooth' });
+    }
   };
 
   // Floating line-art hexagons matching hollow Polygon logo geometry
@@ -624,9 +681,18 @@ export default function Home() {
                 {/* Horizontal Auto-scrolling Interlocking Carousel wrapper with Locked Width Cards (Continuous flow) */}
                 <div 
                   id="featured-talent-carousel-container"
-                  className="relative w-full overflow-hidden text-center"
+                  className="relative w-full overflow-hidden text-center group/carousel"
                   onMouseLeave={handleMouseLeave}
                 >
+                  {/* Left Side Slide-Arrow */}
+                  <button
+                    onClick={handlePrev}
+                    className="absolute left-6 top-1/2 -translate-y-1/2 z-20 bg-[#131722]/70 hover:bg-[#65bc7b]/90 text-[#65bc7b] hover:text-[#0b0e14] border border-white/5 p-3.5 rounded-full backdrop-blur-md shadow-2xl transition-all duration-300 hover:scale-110 opacity-0 group-hover/carousel:opacity-100 focus:opacity-100 hidden md:flex items-center justify-center cursor-pointer"
+                    aria-label="Previous employees"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+
                   <div 
                     ref={carouselRef}
                     onScroll={handleCarouselScroll}
@@ -649,13 +715,24 @@ export default function Home() {
                           employee={emp} 
                           index={idx} 
                           onClick={() => {
-                            setSelectedBot(emp);
-                            setBotImageError(false);
+                            if (!draggedRef.current) {
+                              setSelectedBot(emp);
+                              setBotImageError(false);
+                            }
                           }}
                         />
                       </div>
                     ))}
                   </div>
+
+                  {/* Right Side Slide-Arrow */}
+                  <button
+                    onClick={handleNext}
+                    className="absolute right-6 top-1/2 -translate-y-1/2 z-20 bg-[#131722]/70 hover:bg-[#65bc7b]/90 text-[#65bc7b] hover:text-[#0b0e14] border border-white/5 p-3.5 rounded-full backdrop-blur-md shadow-2xl transition-all duration-300 hover:scale-110 opacity-0 group-hover/carousel:opacity-100 focus:opacity-100 hidden md:flex items-center justify-center cursor-pointer"
+                    aria-label="Next employees"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
 
                   {/* Gradient shadow edges to make the carousel fade elegantly into background */}
                   <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none z-10" />

@@ -188,31 +188,65 @@ export default function Developer() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-[#131722]/85 backdrop-blur-md border border-white/5 rounded-[3rem] p-8 md:p-16 relative overflow-hidden shadow-2xl z-10"
+          className="bg-[#131722]/85 backdrop-blur-md border border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-16 relative overflow-hidden shadow-2xl z-10"
         >
+          {/* Animated Wave Background Layer */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 opacity-30 select-none">
+            <svg
+              className="absolute inset-x-0 bottom-0 w-full h-[60%] min-h-[220px]"
+              viewBox="0 0 1440 600"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="none"
+            >
+              <path
+                className="animate-wave-path1 opacity-45"
+                d="M0,150 C360,50 720,250 1080,170 C1260,130 1350,210 1440,230 L1440,600 L0,600 Z"
+                fill="url(#experience-gradient-green)"
+              />
+              <path
+                className="animate-wave-path2 opacity-35"
+                d="M0,230 C400,120 800,320 1200,200 C1320,160 1380,240 1440,250 L1440,600 L0,600 Z"
+                fill="url(#experience-gradient-cyan)"
+              />
+              <defs>
+                <linearGradient id="experience-gradient-green" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#080a0f" />
+                  <stop offset="50%" stopColor="#66bc7b" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#111622" />
+                </linearGradient>
+                <linearGradient id="experience-gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#111622" />
+                  <stop offset="40%" stopColor="#00d2ff" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#080a0f" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
           <div className="relative z-10 flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[#66bc7b]/10 rounded-xl flex items-center justify-center text-[#66bc7b]">
                 <Quote size={20} />
               </div>
-              <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">
+              <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter uppercase">
                 Most Memorable Experience
               </h2>
             </div>
             
             <div className="w-full h-[1px] bg-white/10 my-2" />
-
+ 
             <div className="relative">
               <span className="absolute -top-10 -left-4 text-[12rem] font-sans font-black text-white/[0.02] select-none pointer-events-none leading-none">
                 “
               </span>
               
-              <p className="text-white/80 text-base md:text-lg leading-relaxed md:leading-loose text-justify font-normal pl-4 border-l-2 border-[#66bc7b]/20 relative z-10">
+              <p className="text-white/80 text-sm md:text-lg leading-relaxed md:leading-loose text-justify font-normal pl-4 border-l-2 border-[#66bc7b]/20 relative z-10">
                 "On my very first day as an intern, I never expected what was coming. Asad Bhai asked me about my co-curricular activities, and when I mentioned I was a Scout, he had me demonstrating loud commands and parade drills right there! I gave it my all, but then he said he wasn't fully satisfied, <span className="text-[#66bc7b] font-bold">You have to dance now.</span> After some hilarious bargaining (I really wanted that selfie for the website!), I gave in and tried some steps to a Bengali song. I was so shy and nervous doing some steps to a Bengali song, but looking back, it was the perfect ice-breaker. That moment instantly washed away all my anxiety, helped introduce me to almost the entire team, and made me feel immediately at home. I’ve worked in other places before, but the work culture and the people here are unmatched. It was the perfect, unforgettable start to my journey, and I’m proud to say I became one of his favorite juniors (well, at least I like to think so!)."
               </p>
             </div>
             
-            <div className="mt-4 flex items-center justify-end gap-3 text-white/40 text-xs font-mono uppercase tracking-widest">
+            <div className="mt-4 flex items-center justify-end gap-3 text-white/40 text-[10px] md:text-xs font-mono uppercase tracking-widest">
               <span>— Day One Onboarding</span>
               <span className="w-1.5 h-1.5 bg-[#66bc7b] rounded-full animate-ping" />
             </div>
