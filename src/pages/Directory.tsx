@@ -162,22 +162,22 @@ export default function Directory() {
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-3xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[420px] aspect-auto md:aspect-[16/9] z-50"
+              className="relative w-full max-w-4xl min-h-[550px] bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row z-50"
             >
-              {/* Left Column: Portrait space / Roast Fallback */}
-              <div className="md:w-[35%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-center justify-center p-8 select-none shrink-0">
+              {/* Left Column: Landscape Aspect-locked Edge-to-edge frame portrait (Completely removed circular borders) */}
+              <div className="md:w-[38%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-stretch justify-center overflow-hidden shrink-0">
                 {((selectedBot.photoLink || selectedBot.image) && !((selectedBot.photoLink || selectedBot.image).includes('none')) && !botImageError) ? (
-                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-full border-2 border-[#66bc7b] overflow-hidden relative shadow-2xl">
+                  <div className="w-full h-full min-h-[300px] md:min-h-full relative select-none">
                     <img 
                       src={(selectedBot.photoLink || selectedBot.image).startsWith('http') ? (selectedBot.photoLink || selectedBot.image) : `/faces/${(selectedBot.photoLink || selectedBot.image)}`} 
                       alt={selectedBot.name} 
-                      className="w-full h-full object-cover" 
+                      className="absolute inset-0 w-full h-full object-cover" 
                       onError={() => setBotImageError(true)}
                     />
                   </div>
                 ) : (
-                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-md bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] border-2 border-[#ff3e6c]/35 flex flex-col items-center justify-center p-4 text-center">
-                    <p className="text-white/85 font-mono text-[10px] leading-tight italic">
+                  <div className="w-full h-full min-h-[300px] md:min-h-full bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] flex flex-col items-center justify-center p-8 text-center select-none">
+                    <p className="text-white/85 font-mono text-xs leading-relaxed italic">
                       "{getRoastForEmployee(employees.findIndex(e => e.id === selectedBot.id))}"
                     </p>
                   </div>
@@ -185,14 +185,14 @@ export default function Directory() {
                 
                 <button 
                   onClick={() => setSelectedBot(null)}
-                  className="absolute top-6 left-6 p-2 bg-black/40 hover:bg-white/15 rounded-full text-white transition-colors md:hidden"
+                  className="absolute top-6 left-6 p-2 bg-black/60 hover:bg-white/15 rounded-full text-white transition-colors md:hidden z-10"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              {/* Right Column: Information layout */}
-              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative">
+              {/* Right Column: Prominent shield profile details split container */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative overflow-y-auto">
                 <button 
                   onClick={() => setSelectedBot(null)}
                   className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors hidden md:block"
@@ -201,26 +201,26 @@ export default function Directory() {
                 </button>
 
                 <div className="flex flex-col gap-6">
-                  {/* Compact code tag chip for Name at the very top */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 bg-[#66bc7b]/10 border border-[#66bc7b]/20 rounded-md text-[10px] font-mono font-bold text-[#66bc7b] uppercase tracking-wide">
-                      {selectedBot.name}
-                    </span>
-                  </div>
-
-                  {/* designation text fields enlarged */}
-                  <div>
-                    <h3 className="text-3xl md:text-3xl font-black text-white tracking-tight uppercase leading-none">
-                      {selectedBot.role}
-                    </h3>
-                    <p className="text-[#66bc7b] text-xs font-black uppercase tracking-widest mt-2 font-mono">
+                  {/* Boosted Name Profile Identity matches directory size */}
+                  <div className="flex flex-col gap-1.5 matches-directory-identity">
+                    <p className="text-[#65bc7b] text-base md:text-lg font-extrabold uppercase tracking-widest font-mono">
                       {selectedBot.department} DEPARTMENT
                     </p>
+                    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight uppercase leading-none">
+                      {selectedBot.name}
+                    </h2>
                   </div>
 
-                  {/* massively enlarged quotes */}
-                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden">
-                    <p className="text-2xl md:text-3xl font-black text-white leading-relaxed italic tracking-tight text-left">
+                  {/* Designation Registry Detail */}
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-white/80 tracking-tight uppercase">
+                      {selectedBot.role}
+                    </h3>
+                  </div>
+
+                  {/* Massively sized employee voice quote block */}
+                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden mt-3">
+                    <p className="text-xl md:text-2xl font-black text-white leading-relaxed italic tracking-tight text-left">
                       "{selectedBot.quote || 'No comment recorded.'}"
                     </p>
                   </div>
@@ -229,7 +229,7 @@ export default function Directory() {
                 <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-end">
                   <button 
                     onClick={() => setSelectedBot(null)}
-                    className="bg-[#66bc7b] text-[#0b0e14] px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+                    className="bg-[#66bc7b] text-[#0b0e14] px-8 py-2.5 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
                   >
                     Dismiss
                   </button>

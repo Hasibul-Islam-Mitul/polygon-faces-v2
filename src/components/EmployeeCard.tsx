@@ -163,38 +163,77 @@ export default function EmployeeCard({ employee, index, onClick }: EmployeeCardP
               initial={{ scale: 0.9, opacity: 0, y: 50 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
-              className="relative w-full max-w-4xl bg-[#131722] border border-white/10 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row"
+              className="relative w-full max-w-4xl min-h-[550px] bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row z-[102]"
             >
-              <div className="md:w-1/2 aspect-square md:aspect-auto overflow-hidden">
-                <ImageContent className="w-full h-full object-cover" showInitials />
+              {/* Left Column: Landscape Aspect-locked Edge-to-edge frame portrait (Completely removed circular borders) */}
+              <div className="md:w-[38%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-stretch justify-center overflow-hidden shrink-0">
+                <div className="w-full h-full min-h-[300px] md:min-h-full relative select-none">
+                  <ImageContent className="absolute inset-0 w-full h-full object-cover" showInitials />
+                </div>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="absolute top-6 left-6 p-2 bg-black/60 hover:bg-white/15 rounded-full text-white transition-colors md:hidden z-10"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+
+              {/* Right Column: Prominent shield profile details split container */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative overflow-y-auto">
                 <button 
                   id={`close-modal-button-${employee.id}`}
                   onClick={() => setIsModalOpen(false)}
-                  className="absolute top-8 right-8 p-3 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors"
+                  className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors hidden md:block"
                 >
-                  <X size={24} />
+                  <X size={16} />
                 </button>
-                
-                <span className="inline-flex px-3 py-1 bg-[#65bc7b]/10 text-[#65bc7b] rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 self-start">
-                  {employee.department}
-                </span>
-                
-                <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-2">{employee.name}</h2>
-                <p className="text-xl text-[#65bc7b] font-bold mb-8 italic">{employee.role}</p>
-                
-                <div className="p-6 bg-white/5 rounded-2xl border border-white/5 mb-8">
-                    <QuoteIcon className="text-[#65bc7b] mb-4 opacity-30" size={24} />
-                    <p className="text-white/80 leading-relaxed italic">{employee.quote || "Collaborating on the next generation of Fintech infrastructure for Bangladesh."}</p>
+
+                <div className="flex flex-col gap-6">
+                  {/* Boosted Name Profile Identity matches of directory */}
+                  <div className="flex flex-col gap-1.5 matches-directory-identity">
+                    <p className="text-[#65bc7b] text-base md:text-lg font-extrabold uppercase tracking-widest font-mono">
+                      {employee.department} DEPARTMENT
+                    </p>
+                    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight uppercase leading-none">
+                      {employee.name}
+                    </h2>
+                  </div>
+
+                  {/* Designation Registry Detail */}
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-white/80 tracking-tight uppercase">
+                      {employee.role}
+                    </h3>
+                  </div>
+
+                  {/* Massively sized employee voice quote block */}
+                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden mt-3">
+                    <p className="text-xl md:text-2xl font-black text-white leading-relaxed italic tracking-tight text-left">
+                      "{employee.quote || 'No comment recorded.'}"
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex gap-4">
                     {employee.linkedin && (
-                         <a href={employee.linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-6 py-3 bg-[#0077b5] text-white rounded-xl font-bold transition-transform hover:scale-105">
-                            <Linkedin size={20} /> LinkedIn
-                        </a>
+                      <a 
+                        href={employee.linkedin} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#0077b5] text-white rounded-full font-black text-xs uppercase tracking-wider transition-transform hover:scale-105"
+                      >
+                        <Linkedin size={14} /> LinkedIn
+                      </a>
                     )}
+                  </div>
+
+                  <button 
+                    onClick={() => setIsModalOpen(false)}
+                    className="bg-[#65bc7b] text-[#0b0e14] px-8 py-2.5 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             </motion.div>

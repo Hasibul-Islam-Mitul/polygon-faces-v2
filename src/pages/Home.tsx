@@ -108,6 +108,7 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
+  const scrollPosRef = useRef(0);
 
   useEffect(() => {
     loadData();
@@ -119,6 +120,17 @@ export default function Home() {
     setEmployees(shuffleArray(data)); 
     setLoading(false);
   };
+
+  // Initialize scroll position to center third when loaded
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (el && !loading && employees.length > 0) {
+      if (el.scrollLeft === 0) {
+        el.scrollLeft = el.scrollWidth / 3;
+      }
+      scrollPosRef.current = el.scrollLeft;
+    }
+  }, [loading, employees]);
 
   const handleMeetBot = () => {
     if (employees.length > 0) {
@@ -134,7 +146,7 @@ export default function Home() {
     return [...employees, ...employees, ...employees];
   }, [employees]);
 
-  // Carousel Slow Horizontal Autoplay logic + loops back smoothly
+  // Carousel Smooth Continuous Auto-scroll Horizontal Marquee
   useEffect(() => {
     const el = carouselRef.current;
     if (!el || loading || employees.length === 0) return;
@@ -143,14 +155,23 @@ export default function Home() {
     let lastTime = performance.now();
     
     const scroll = (time: number) => {
-      if (!isCarouselHovered && !isDragging && el) {
-        const elapsed = time - lastTime;
-        el.scrollLeft += 0.04 * elapsed; 
+      if (!isDragging && el) {
+        const elapsed = Math.min(time - lastTime, 50); // Prevent giant translation leaps of auto-scroll
         
-        // Loop back seamlessly to the first half of cloned slides
-        if (el.scrollLeft >= el.scrollWidth / 2) {
-          el.scrollLeft = 0;
+        // Relaxed, beautiful pace (0.025 pixels/ms is extremely relaxed and constant)
+        scrollPosRef.current += 0.025 * elapsed; 
+        
+        const firstThird = el.scrollWidth / 3;
+        const secondThird = firstThird * 2;
+        
+        // Wrap-around seamlessly near container ends
+        if (scrollPosRef.current >= secondThird) {
+          scrollPosRef.current -= firstThird;
+        } else if (scrollPosRef.current <= 5) {
+          scrollPosRef.current += firstThird;
         }
+        
+        el.scrollLeft = scrollPosRef.current;
       }
       lastTime = time;
       animationFrameId = requestAnimationFrame(scroll);
@@ -158,7 +179,15 @@ export default function Home() {
     
     animationFrameId = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isCarouselHovered, isDragging, loading, employees]);
+  }, [isDragging, loading, employees]);
+
+  // Handle native scroll event to keep scrollPosRef in-sync when manual scrolling is ongoing
+  const handleCarouselScroll = () => {
+    const el = carouselRef.current;
+    if (el && (isCarouselHovered || isDragging)) {
+      scrollPosRef.current = el.scrollLeft;
+    }
+  };
 
   // Support sideways scroll gesture via desktop vertical mouse wheel inside the container
   const handleCarouselWheel = (e: React.WheelEvent) => {
@@ -166,6 +195,7 @@ export default function Home() {
     if (el) {
       if (e.deltaY !== 0) {
         el.scrollLeft += e.deltaY;
+        scrollPosRef.current = el.scrollLeft;
       }
     }
   };
@@ -196,6 +226,7 @@ export default function Home() {
     const x = e.pageX - el.offsetLeft;
     const walk = (x - startX) * 1.5; 
     el.scrollLeft = scrollLeftState - walk;
+    scrollPosRef.current = el.scrollLeft;
   };
 
   // Touch Swipe support for mobile
@@ -203,12 +234,14 @@ export default function Home() {
     const el = carouselRef.current;
     if (!el) return;
     setIsDragging(true);
+    setIsCarouselHovered(true);
     setStartX(e.touches[0].pageX - el.offsetLeft);
     setScrollLeftState(el.scrollLeft);
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
+    setIsCarouselHovered(false);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -218,6 +251,7 @@ export default function Home() {
     const x = e.touches[0].pageX - el.offsetLeft;
     const walk = (x - startX) * 1.5;
     el.scrollLeft = scrollLeftState - walk;
+    scrollPosRef.current = el.scrollLeft;
   };
 
   // Floating line-art hexagons matching hollow Polygon logo geometry
@@ -442,7 +476,7 @@ export default function Home() {
           loop 
           muted 
           playsInline 
-          className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none z-0"
+          className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none z-0 border-none"
         />
 
         {floatingHexagons.map((hex) => (
@@ -545,35 +579,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Hero Content Section */}
-      <div className="relative pt-44 pb-16 px-4 z-10 overflow-hidden">
+      {/* Hero Content Section - Spacious upper portion to display background conversation clouds, CTA pushed low */}
+      <div className="relative pt-[500px] pb-16 px-4 z-10 overflow-hidden">
         <div className="max-w-7xl mx-auto flex flex-col items-center">
           
-          {/* Compact Brand Logo Framing Container */}
-          <motion.div
-            id="brand-logo-frame"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mb-8 p-0 w-20 h-20 md:w-24 md:h-24 bg-[#131722] border border-[#65bc7b]/20 rounded-2xl relative overflow-hidden flex items-center justify-center transition-transform hover:scale-105 shadow-[0_0_25px_rgba(101,188,123,0.1)]"
-          >
-            <img 
-              src="/logo.png" 
-              alt="Polygon logo" 
-              className="w-full h-full object-cover scale-110 absolute inset-0 transition-transform duration-500 hover:scale-120" 
-            />
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-white/70 text-lg md:text-2xl max-w-2xl text-center mt-6 mb-12 leading-relaxed font-sans font-medium tracking-tight"
-          >
-            Meet our people and learn about our culture.
-          </motion.p>
-
           {/* Squeezed and Vertically Stacked CTA Action Triggers */}
-          <div className="flex flex-col gap-4 w-full max-w-xs relative z-30">
+          <div className="flex flex-col gap-4 w-full max-w-xs relative z-30 mt-16">
             <button 
               onClick={handleMeetBot}
               className="group flex items-center justify-center gap-3 bg-[#65bc7b]/10 backdrop-blur-md border border-[#65bc7b]/30 text-[#65bc7b] hover:bg-[#65bc7b]/20 px-6 py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-300 hover:scale-105"
@@ -595,21 +606,8 @@ export default function Home() {
       {/* Employee / High-End Interactive Slideshow Carousel Section */}
       <section ref={featuredTalentRef} id="featured-talent" className="relative max-w-7xl mx-auto px-4 pb-28 z-10 scroll-mt-24">
          <div className="flex flex-col items-center mb-10 text-center">
-            <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-[#65bc7b]/10 border border-[#65bc7b]/20 px-6 py-3 rounded-2xl flex items-center gap-3 mb-8"
-            >
-                <div className="bg-[#65bc7b] p-1.5 rounded-lg text-[#0b0e14]">
-                    <Star size={14} fill="currentColor" />
-                </div>
-                <span className="text-white text-[10px] font-black uppercase tracking-widest leading-none font-mono">
-                    Onboarding Milestone: <span className="text-[#65bc7b]">MD. Hasibul Islam Mitul</span> has engaged with {employees.length} people.
-                </span>
-            </motion.div>
-
             {/* Hyper-Minimalist Tag replacing heavy Core Personnel title */}
-            <div className="inline-block bg-[#131722] border border-white/5 px-6 py-2.5 rounded-full shadow-lg">
+            <div className="inline-block bg-[#131722] border border-white/5 px-8 py-3 rounded-full shadow-lg">
                 <span className="text-sm font-mono font-black text-[#65bc7b] uppercase tracking-[0.35em]">
                   Employees
                 </span>
@@ -623,15 +621,15 @@ export default function Home() {
             </div>
         ) : (
             <>
-                {/* Horizontal Auto-scrolling Interlocking Carousel wrapper with Locked Width Cards */}
+                {/* Horizontal Auto-scrolling Interlocking Carousel wrapper with Locked Width Cards (Continuous flow) */}
                 <div 
                   id="featured-talent-carousel-container"
                   className="relative w-full overflow-hidden text-center"
-                  onMouseEnter={() => setIsCarouselHovered(true)}
                   onMouseLeave={handleMouseLeave}
                 >
                   <div 
                     ref={carouselRef}
+                    onScroll={handleCarouselScroll}
                     onWheel={handleCarouselWheel}
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
@@ -662,6 +660,23 @@ export default function Home() {
                   {/* Gradient shadow edges to make the carousel fade elegantly into background */}
                   <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0e14] to-transparent pointer-events-none z-10" />
                   <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0e14] to-transparent pointer-events-none z-10" />
+                </div>
+
+                {/* Simplified & bolded Onboarding Milestone banner positioned lower to balance layout white space */}
+                <div className="mt-14 flex justify-center">
+                  <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      className="bg-[#65bc7b]/10 border border-[#65bc7b]/30 px-10 py-5 rounded-3xl flex items-center gap-4 shadow-xl max-w-xl w-full justify-center"
+                  >
+                      <div className="bg-[#65bc7b] p-3 rounded-xl text-[#0b0e14] shrink-0">
+                          <Star size={20} fill="currentColor" />
+                      </div>
+                      <span className="text-white text-lg md:text-2xl font-black uppercase tracking-wide leading-none font-mono">
+                          Mitul met <span className="text-[#65bc7b]">72</span> people
+                      </span>
+                  </motion.div>
                 </div>
 
                 <div className="text-center mt-12">
@@ -838,7 +853,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Fun Office Stats Board - Clean Elegant Overhaul with Local Images */}
+      {/* Fun Office Stats Board - Clean Elegant Overhaul with FULL Local background images */}
       <div id="polygon-telemetry-fun-stats" className="bg-[#080a0f] border-y border-white/5 py-24 px-4 z-10 relative overflow-hidden">
         {/* Subtle grid backdrop decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(101,188,123,0.02)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
@@ -854,72 +869,79 @@ export default function Home() {
               { 
                 label: 'Caffeine Engine', 
                 value: '340+ Cups / Day', 
-                subtext: 'Fueled entirely by syntax errors.',
-                image: '/coffee.png',
+                subtext: 'Fueled entirely by production panic and syntax errors.',
+                image: '/coffee.jpg',
                 glow: 'shadow-[0_0_20px_rgba(101,188,123,0.12)] border-[#65bc7b]/15 text-[#65bc7b]' 
               },
               { 
                 label: 'The Great Escapes', 
                 value: '42 Outings / Hour', 
-                subtext: 'Frequent unexpected disappearances to the washroom or lawn.',
-                image: '/bunk.png',
+                subtext: 'Frequent unexpected tactical disappearances to the washroom or the office lawn.',
+                image: '/outing.jpeg',
                 glow: 'shadow-[0_0_20px_rgba(130,71,229,0.12)] border-[#8247e5]/15 text-[#8247e5]' 
               },
               { 
                 label: 'Chief Security Officer', 
                 value: 'Doglus', 
-                subtext: 'Patrolling the corridors for dropped snacks.',
-                image: '/doglus.png',
+                subtext: 'Patrolling the corridors for dropped snacks, loose code, and system bugs.',
+                image: '/doglus.jpeg',
                 glow: 'shadow-[0_0_20px_rgba(59,130,246,0.12)] border-blue-500/15 text-blue-400' 
               },
               { 
                 label: 'Head of Employee Wellness', 
                 value: 'Milo', 
-                subtext: 'Sleeping through 100% of critical production deployments.',
-                image: '/milo.png',
+                subtext: 'Successfully sleeping through 100% of critical production deployment alerts.',
+                image: '/milo.jpeg',
                 glow: 'shadow-[0_0_20px_rgba(236,72,153,0.12)] border-pink-500/15 text-pink-400' 
-              },
+              }
             ].map((card, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -8, scale: 1.02 }}
                 className={cn(
-                  "p-8 bg-[#131722]/90 backdrop-blur-md rounded-[2.5rem] border flex flex-col justify-between min-h-[290px] transition-all relative overflow-hidden",
+                  "p-6 bg-[#131722]/55 backdrop-blur-md rounded-[2rem] border flex flex-col justify-between min-h-[290px] transition-all relative overflow-hidden group",
                   card.glow
                 )}
               >
-                {/* Visual glow element */}
-                <div className="absolute top-0 right-0 w-24 h-24 opacity-[0.05] bg-current filter blur-2xl rounded-full pointer-events-none" />
-
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white/5 border border-white/5 shrink-0 flex items-center justify-center shadow-inner">
-                    <img 
-                      src={card.image} 
-                      alt={card.label} 
-                      className="w-full h-full object-cover rounded-xl scale-105" 
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/55 leading-none block">{card.label}</span>
-                  </div>
-                </div>
-
-                <div className="mt-8 mb-4">
-                  <p className="text-3xl font-black text-white tracking-tight mb-2 uppercase">{card.value}</p>
-                  <p className="text-xs text-white/50 leading-relaxed font-normal">{card.subtext}</p>
-                </div>
-
-                <div className="w-full h-1 bg-current opacity-20 rounded-full overflow-hidden shrink-0 mt-3">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    whileInView={{ width: '100%' }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.5, delay: i * 0.2 }}
-                    className="h-full bg-current" 
+                {/* Visual background image layer stretching 100% of containing card wrapper with clearly visible images */}
+                <div className="absolute inset-0 z-0 opacity-[0.45] group-hover:opacity-75 transition-opacity duration-500 pointer-events-none">
+                  <img 
+                    src={card.image} 
+                    alt={card.label} 
+                    className="w-full h-full object-cover filter brightness-[0.75] contrast-[1.05]" 
+                    onError={(e) => {
+                      const fallbacks = [
+                        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=600',
+                        'https://images.unsplash.com/photo-1530789253388-582c481c54b0?auto=format&fit=crop&q=80&w=600',
+                        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=600',
+                        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=600'
+                      ];
+                      (e.target as HTMLImageElement).src = fallbacks[i];
+                    }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d0f17]/95 via-[#0d0f17]/50 to-transparent opacity-90" />
+                </div>
+ 
+                {/* Subtitle & Value Sizing Content Stack */}
+                <div className="relative z-10 flex-grow flex flex-col justify-between h-full">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-current opacity-90 leading-none block mb-2">{card.label}</span>
+                    <p className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2 uppercase leading-none">{card.value}</p>
+                  </div>
+ 
+                  <div className="mt-2">
+                    <p className="text-xs md:text-sm font-semibold text-white/95 leading-relaxed font-sans drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{card.subtext}</p>
+                    
+                    <div className="w-full h-1 bg-current opacity-25 rounded-full overflow-hidden shrink-0 mt-4">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        whileInView={{ width: '100%' }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1.5, delay: i * 0.2 }}
+                        className="h-full bg-current" 
+                      />
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -943,22 +965,22 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-3xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[420px] aspect-auto md:aspect-[16/9] z-50"
+              className="relative w-full max-w-4xl min-h-[550px] bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row z-50"
             >
-              {/* Left Column: Portrait image or Sarcastic Bengali Roast Fallback */}
-              <div className="md:w-[35%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-center justify-center p-8 select-none shrink-0">
+              {/* Left Column: Landscape Aspect-locked Edge-to-edge frame portrait (Completely removed circular borders) */}
+              <div className="md:w-[38%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-stretch justify-center overflow-hidden shrink-0">
                 {selectedBot.photoLink && !selectedBot.photoLink.includes('none') && !botImageError ? (
-                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-full border-2 border-[#65bc7b] overflow-hidden relative shadow-2xl">
+                  <div className="w-full h-full min-h-[300px] md:min-h-full relative select-none">
                     <img 
                       src={selectedBot.photoLink.startsWith('http') ? selectedBot.photoLink : `/faces/${selectedBot.photoLink}`} 
                       alt={selectedBot.name} 
-                      className="w-full h-full object-cover" 
+                      className="absolute inset-0 w-full h-full object-cover" 
                       onError={() => setBotImageError(true)}
                     />
                   </div>
                 ) : (
-                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-md bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] border-2 border-[#ff3e6c]/35 flex flex-col items-center justify-center p-4 text-center">
-                    <p className="text-white/85 font-mono text-[10px] leading-tight italic">
+                  <div className="w-full h-full min-h-[300px] md:min-h-full bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] flex flex-col items-center justify-center p-8 text-center select-none">
+                    <p className="text-white/85 font-mono text-xs leading-relaxed italic">
                       "{getRoastForEmployee(employees.findIndex(e => e.id === selectedBot.id))}"
                     </p>
                   </div>
@@ -966,14 +988,14 @@ export default function Home() {
                 
                 <button 
                   onClick={() => setSelectedBot(null)}
-                  className="absolute top-6 left-6 p-2 bg-black/40 hover:bg-white/15 rounded-full text-white transition-colors md:hidden"
+                  className="absolute top-6 left-6 p-2 bg-black/60 hover:bg-white/15 rounded-full text-white transition-colors md:hidden z-10"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              {/* Right Column: Detailed Designation with massive quote and balanced typographic hierarchy */}
-              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative">
+              {/* Right Column: Prominent shield profile details split container */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between relative overflow-y-auto">
                 <button 
                   onClick={() => setSelectedBot(null)}
                   className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors hidden md:block"
@@ -982,26 +1004,26 @@ export default function Home() {
                 </button>
 
                 <div className="flex flex-col gap-6">
-                  {/* Compact code tag chip for Name at the very top */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 bg-[#65bc7b]/10 border border-[#65bc7b]/20 rounded-md text-[10px] font-mono font-bold text-[#65bc7b] uppercase tracking-wide">
-                      {selectedBot.name}
-                    </span>
-                  </div>
-
-                  {/* Designated department and description lines below with balanced layout margins */}
-                  <div>
-                    <h3 className="text-3xl md:text-3xl font-black text-white tracking-tight uppercase leading-none">
-                      {selectedBot.role}
-                    </h3>
-                    <p className="text-[#65bc7b] text-xs font-black uppercase tracking-widest mt-2 font-mono">
+                  {/* Boosted Name Profile Identity matches directory size */}
+                  <div className="flex flex-col gap-1.5 matches-directory-identity">
+                    <p className="text-[#65bc7b] text-base md:text-lg font-extrabold uppercase tracking-widest font-mono">
                       {selectedBot.department} DEPARTMENT
                     </p>
+                    <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight uppercase leading-none">
+                      {selectedBot.name}
+                    </h2>
                   </div>
 
-                  {/* Massively sized employee quote block taking up the majority of the landscape modal center */}
-                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden">
-                    <p className="text-2xl md:text-3xl font-black text-white leading-relaxed italic tracking-tight text-left">
+                  {/* Designation Registry Detail */}
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-bold text-white/80 tracking-tight uppercase">
+                      {selectedBot.role}
+                    </h3>
+                  </div>
+
+                  {/* Massively sized employee voice quote block */}
+                  <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden mt-3">
+                    <p className="text-xl md:text-2xl font-black text-white leading-relaxed italic tracking-tight text-left">
                       "{selectedBot.quote || 'No comment recorded.'}"
                     </p>
                   </div>
@@ -1010,7 +1032,7 @@ export default function Home() {
                 <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-end">
                   <button 
                     onClick={() => setSelectedBot(null)}
-                    className="bg-[#65bc7b] text-[#0b0e14] px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
+                    className="bg-[#65bc7b] text-[#0b0e14] px-8 py-2.5 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
                   >
                     Dismiss
                   </button>
@@ -1022,7 +1044,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* DYNAMIC CATEGORIZED QUOTES MODAL */}
+      {/* DYNAMIC CATEGORIZED QUOTES MODAL (Shares exact same split structure) */}
       <AnimatePresence>
         {selectedCategory && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
@@ -1038,78 +1060,92 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-2xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col max-h-[80vh] z-50"
+              className="relative w-full max-w-4xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[460px] aspect-auto md:aspect-[16/9] z-50"
             >
-              {/* Modal header details */}
-              <div className="p-8 pb-4 border-b border-white/5 flex justify-between items-start gap-4">
-                <div>
-                  <div className="flex items-center gap-2 text-[#8247e5] text-[10px] font-black uppercase tracking-widest mb-1 font-mono">
-                    <Smile size={12} fill="currentColor" /> Category Match Vector
-                  </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase">{selectedCategory.name}</h3>
+              {/* Left Column Component Sharing the structural template */}
+              <div className="md:w-[38%] relative bg-gradient-to-br from-[#8247e5]/10 to-[#0b0e14] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-center justify-center p-10 text-center select-none shrink-0">
+                <div className="bg-[#8247e5]/20 p-5 rounded-3xl text-[#8247e5] mb-6">
+                  <Smile size={38} fill="currentColor" />
                 </div>
+                <p className="text-[#8247e5] text-xs font-black uppercase tracking-widest font-mono mb-2">Category Vector</p>
+                <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase mb-4">{selectedCategory.name}</h3>
+                
+                <span className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-mono tracking-wider text-white/50 uppercase">
+                  {categoryQuotes.length} Match Records
+                </span>
+
                 <button 
                   onClick={() => setSelectedCategory(null)}
-                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors animate-fade-in"
+                  className="absolute top-6 left-6 p-2 bg-black/40 hover:bg-white/15 rounded-full text-white transition-colors md:hidden"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* Scrollable list of actual feedback statements */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                {categoryQuotes.length === 0 ? (
-                  <div className="text-center py-12 text-white/30 text-sm font-mono leading-relaxed">
-                    No exact logs found in records matching this category's filter logic.
-                  </div>
-                ) : (
-                  categoryQuotes.map((emp) => {
-                    const hasValidPhoto = emp.photoLink && !emp.photoLink.includes('none');
-                    return (
-                      <div key={emp.id} className="p-5 bg-[#0b0e14]/80 border border-white/5 rounded-2xl flex flex-col gap-4 shadow-lg">
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center animate-pulse"
-                            style={{
-                              background: hasValidPhoto ? 'transparent' : 'linear-gradient(135deg, #131722 0%, #0b0e14 100%)'
-                            }}
-                          >
-                            {hasValidPhoto ? (
-                              <img 
-                                src={emp.photoLink.startsWith('http') ? emp.photoLink : `/faces/${emp.photoLink}`} 
-                                alt={emp.name} 
-                                className="w-full h-full object-cover" 
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
-                                }}
-                              />
-                            ) : (
-                              <span className="text-xs font-mono font-bold text-[#ff3e6c]">
-                                {getInitials(emp.name)}
-                              </span>
-                            )}
+              {/* Right Column Component: Scrollable feedback quotes list */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between max-h-[85vh] md:max-h-[600px] overflow-hidden relative">
+                <button 
+                  onClick={() => setSelectedCategory(null)}
+                  className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors hidden md:block"
+                >
+                  <X size={16} />
+                </button>
+
+                <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                  {categoryQuotes.length === 0 ? (
+                    <div className="text-center py-12 text-white/30 text-sm font-mono leading-relaxed">
+                      No exact logs found in records matching this category's filter logic.
+                    </div>
+                  ) : (
+                    categoryQuotes.map((emp) => {
+                      const hasValidPhoto = emp.photoLink && !emp.photoLink.includes('none');
+                      return (
+                        <div key={emp.id} className="p-5 bg-[#0b0e14]/80 border border-white/5 rounded-2xl flex flex-col gap-4 shadow-lg">
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 flex items-center justify-center animate-pulse"
+                              style={{
+                                background: hasValidPhoto ? 'transparent' : 'linear-gradient(135deg, #131722 0%, #0b0e14 100%)'
+                              }}
+                            >
+                              {hasValidPhoto ? (
+                                <img 
+                                  src={emp.photoLink.startsWith('http') ? emp.photoLink : `/faces/${emp.photoLink}`} 
+                                  alt={emp.name} 
+                                  className="w-full h-full object-cover" 
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-xs font-mono font-bold text-[#ff3e6c]">
+                                  {getInitials(emp.name)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white font-black text-sm leading-none">{emp.name}</p>
+                              <p className="text-white/40 text-[10px] font-medium mt-1.5 uppercase tracking-wider">{emp.role} // {emp.department}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-white font-black text-sm leading-none">{emp.name}</p>
-                            <p className="text-white/40 text-[10px] font-medium mt-1.5 uppercase tracking-wider">{emp.role} // {emp.department}</p>
-                          </div>
+
+                          {/* Highlighted matching quote */}
+                          <p className="text-white/70 italic text-sm leading-relaxed border-l-2 border-[#65bc7b]/40 pl-4 py-1">
+                            "{emp.quote || 'No comment recorded.'}"
+                          </p>
                         </div>
+                      );
+                    })
+                  )}
+                </div>
 
-                        {/* Highlighted matching quote */}
-                        <p className="text-white/70 italic text-sm leading-relaxed border-l-2 border-[#65bc7b]/40 pl-4 py-1">
-                          "{emp.quote || 'No comment recorded.'}"
-                        </p>
-                      </div>
-                    );
-                  })
-                )}
+                {/* Secure sync stats */}
+                <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] font-mono tracking-widest text-white/30 uppercase shrink-0">
+                  <span>Category Search Total: {categoryQuotes.length} matches</span>
+                  <span>Audit Sync Secure</span>
+                </div>
               </div>
 
-              {/* Modal footer statistics information */}
-              <div className="p-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-between text-[9px] font-mono tracking-widest text-white/30 uppercase">
-                <span>Category Search Total: {categoryQuotes.length} matches</span>
-                <span>Audit Sync Secure</span>
-              </div>
             </motion.div>
           </div>
         )}

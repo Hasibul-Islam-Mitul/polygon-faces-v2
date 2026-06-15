@@ -8,88 +8,98 @@ import { Github, Linkedin, Calendar, Briefcase, Palette, Instagram, Globe, Quote
 
 export default function Developer() {
   return (
-    <div className="relative min-h-screen bg-[#0b0e14] pt-32 pb-20 px-4 overflow-hidden">
+    <div className="relative min-h-screen premium-grad-bg bg-[#05070a] pt-32 pb-20 px-4 overflow-hidden">
       {/* Standalone Keyframe Wave Styles */}
       <style>{`
         @keyframes waveFloat1 {
-          0% { transform: translateX(0) scaleY(1); }
-          50% { transform: translateX(-5%) scaleY(1.1) skewY(-2deg); }
-          100% { transform: translateX(0) scaleY(1); }
+          0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+          50% { transform: translate(-2%, 3%) scale(1.05) rotate(1.5deg); }
+          100% { transform: translate(0, 0) scale(1) rotate(0deg); }
         }
         @keyframes waveFloat2 {
-          0% { transform: translateX(0) scaleY(1); }
-          50% { transform: translateX(5%) scaleY(0.9) skewY(2deg); }
-          100% { transform: translateX(0) scaleY(1); }
+          0% { transform: translate(0, 0) scale(1.02) rotate(0deg); }
+          50% { transform: translate(3%, -2%) scale(0.97) rotate(-2deg); }
+          100% { transform: translate(0, 0) scale(1.02) rotate(0deg); }
         }
         @keyframes waveFloat3 {
-          0% { transform: translateY(0) scaleX(1); }
-          50% { transform: translateY(-3%) scaleX(1.05); }
-          100% { transform: translateY(0) scaleX(1); }
+          0% { transform: translate(0, 0) scale(0.98) rotate(0deg); }
+          50% { transform: translate(-1.5%, -1.5%) scale(1.03) rotate(1deg); }
+          100% { transform: translate(0, 0) scale(0.98) rotate(0deg); }
+        }
+        @keyframes bgPulse {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
         }
         .animate-wave-path1 {
-          animation: waveFloat1 15s ease-in-out infinite;
-          transform-origin: center bottom;
+          animation: waveFloat1 18s ease-in-out infinite;
+          transform-origin: center center;
         }
         .animate-wave-path2 {
-          animation: waveFloat2 20s ease-in-out infinite;
-          animation-delay: -4s;
-          transform-origin: center bottom;
+          animation: waveFloat2 24s ease-in-out infinite;
+          animation-delay: -6s;
+          transform-origin: center center;
         }
         .animate-wave-path3 {
-          animation: waveFloat3 25s ease-in-out infinite;
-          animation-delay: -8s;
-          transform-origin: center bottom;
+          animation: waveFloat3 30s ease-in-out infinite;
+          animation-delay: -12s;
+          transform-origin: center center;
+        }
+        .premium-grad-bg {
+          background: linear-gradient(135deg, #05070b 0%, #0a0d14 50%, #111520 100%);
+          background-size: 200% 200%;
+          animation: bgPulse 15s ease infinite;
         }
       `}</style>
 
       {/* Layered SVG Fluid Waves */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 leading-[0]">
-        {/* Top-Right Neon Gradient Backing Orb */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#66bc7b]/10 to-[#8247e5]/5 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-[#66bc7b]/5 to-[#ff3e6c]/5 blur-[150px] rounded-full pointer-events-none" />
+        {/* Neon Gradient Backing Orbs */}
+        <div className="absolute top-0 right-0 w-[550px] h-[550px] bg-gradient-to-br from-[#66bc7b]/15 to-[#8247e5]/10 blur-[130px] rounded-full pointer-events-none opacity-60" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[650px] h-[650px] bg-gradient-to-tr from-[#66bc7b]/10 to-[#ff3e6c]/10 blur-[160px] rounded-full pointer-events-none opacity-50" />
 
         <svg
           id="fluid-wave-layers"
-          className="absolute bottom-0 left-0 w-full h-[55%] min-h-[400px]"
-          viewBox="0 0 1440 600"
+          className="absolute inset-0 w-full h-full opacity-80"
+          viewBox="0 0 1440 900"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="none"
         >
           {/* Wave 3: Deep backing wave */}
           <path
-            className="animate-wave-path3 opacity-[0.12]"
-            d="M0,320 C320,420 640,240 960,340 C1280,440 1360,280 1440,300 L1440,600 L0,600 Z"
+            className="animate-wave-path3 opacity-[0.16]"
+            d="M0,250 C320,350 640,80 960,220 C1280,340 1360,250 1440,200 L1440,900 L0,900 Z"
             fill="url(#wave-gradient-purple)"
           />
           {/* Wave 2: Middle contrasting wave */}
           <path
-            className="animate-wave-path2 opacity-[0.18]"
-            d="M0,240 C400,140 800,340 1200,220 C1320,180 1380,240 1440,260 L1440,600 L0,600 Z"
+            className="animate-wave-path2 opacity-[0.22]"
+            d="M0,180 C400,70 800,320 1200,180 C1320,140 1380,260 1440,230 L1440,900 L0,900 Z"
             fill="url(#wave-gradient-cyan)"
           />
           {/* Wave 1: Foreground primary wave */}
           <path
-            className="animate-wave-path1 opacity-[0.25]"
-            d="M0,160 C360,60 720,260 1080,180 C1260,140 1350,220 1440,240 L1440,600 L0,600 Z"
+            className="animate-wave-path1 opacity-[0.3]"
+            d="M0,280 C360,170 720,400 1080,300 C1260,260 1350,360 1440,330 L1440,900 L0,900 Z"
             fill="url(#wave-gradient-green)"
           />
 
           <defs>
             <linearGradient id="wave-gradient-green" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#131722" />
-              <stop offset="50%" stopColor="#66bc7b" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#0b0e14" />
+              <stop offset="0%" stopColor="#080a0f" />
+              <stop offset="50%" stopColor="#66bc7b" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#111622" />
             </linearGradient>
             <linearGradient id="wave-gradient-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#0b0e14" />
-              <stop offset="40%" stopColor="#00d2ff" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#131722" />
+              <stop offset="0%" stopColor="#111622" />
+              <stop offset="40%" stopColor="#00d2ff" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#080a0f" />
             </linearGradient>
             <linearGradient id="wave-gradient-purple" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#131722" />
-              <stop offset="60%" stopColor="#8247e5" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#0b0e14" />
+              <stop offset="0%" stopColor="#080a0f" />
+              <stop offset="60%" stopColor="#8247e5" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#111622" />
             </linearGradient>
           </defs>
         </svg>
