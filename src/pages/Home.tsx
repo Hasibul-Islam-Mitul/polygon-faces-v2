@@ -8,15 +8,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowRight, 
-  Globe, 
-  Shield, 
-  Zap, 
   Users, 
   Bot, 
   X, 
   Star, 
   TrendingUp, 
-  Smile 
+  Smile,
+  Shield,
+  Zap
 } from 'lucide-react';
 import { fetchEmployeeData, shuffleArray } from '../lib/csv-utils';
 import { Employee } from '../types';
@@ -33,14 +32,36 @@ const BENGALI_ROASTS = [
   "Chhobi chara employee? System-e to compile korche na!"
 ];
 
-const getRoastForEmployee = (id: string | number) => {
-  const str = String(id);
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % BENGALI_ROASTS.length;
-  return BENGALI_ROASTS[index];
+const getRoastForEmployee = (index: number) => {
+  return BENGALI_ROASTS[index % BENGALI_ROASTS.length];
+};
+
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
+
+// Help helper logic for No comments identification
+const checkIsNoComment = (rawQuote: string | null | undefined): boolean => {
+  if (rawQuote === null || rawQuote === undefined) return true;
+  const cleaned = rawQuote.trim().toLowerCase();
+  return cleaned === '' || 
+         cleaned === 'no comments' || 
+         cleaned === 'no comment' || 
+         cleaned === 'no comments.' || 
+         cleaned === 'no comment.' || 
+         cleaned === 'none' || 
+         cleaned === 'none.' ||
+         cleaned === 'na' || 
+         cleaned === 'n/a' || 
+         cleaned === 'n/a.' || 
+         cleaned.includes('no comment') ||
+         cleaned.includes('no comments');
 };
 
 // Centralised static categories schema matching brand guidelines
@@ -107,7 +128,13 @@ export default function Home() {
     }
   };
 
-  // Carousel Slow Horizontal Autoplay logic + full drag support + mouse hover pauses
+  // Continuous infinite tripling list matching slide mechanics
+  const displayEmployees = useMemo(() => {
+    if (employees.length === 0) return [];
+    return [...employees, ...employees, ...employees];
+  }, [employees]);
+
+  // Carousel Slow Horizontal Autoplay logic + loops back smoothly
   useEffect(() => {
     const el = carouselRef.current;
     if (!el || loading || employees.length === 0) return;
@@ -118,10 +145,10 @@ export default function Home() {
     const scroll = (time: number) => {
       if (!isCarouselHovered && !isDragging && el) {
         const elapsed = time - lastTime;
-        el.scrollLeft += 0.03 * elapsed; // Slowly shift leftward
+        el.scrollLeft += 0.04 * elapsed; 
         
-        // Loop back to start if scrolled near edge
-        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 2) {
+        // Loop back seamlessly to the first half of cloned slides
+        if (el.scrollLeft >= el.scrollWidth / 2) {
           el.scrollLeft = 0;
         }
       }
@@ -203,54 +230,52 @@ export default function Home() {
     { id: 6, left: "28%", top: "72%", size: 60, duration: 29, delay: 3.2, x: [0, -35, 25, 0], y: [0, -55, 35, 0] },
     { id: 7, left: "88%", top: "45%", size: 70, duration: 23, delay: 2.8, x: [0, -15, 45, 0], y: [0, -45, 15, 0] },
     { id: 8, left: "4%", top: "40%", size: 80, duration: 32, delay: 1.5, x: [0, 35, -25, 0], y: [0, -35, 45, 0] },
-    { id: 9, left: "58%", top: "8%", size: 90, duration: 22, delay: 0.9, x: [0, -45, 25, 0], y: [0, 45, -25, 0] },
-    { id: 10, left: "32%", top: "4%", size: 65, duration: 31, delay: 3.8, x: [0, 25, -35, 0], y: [0, -25, 35, 0] },
-    { id: 11, left: "48%", top: "80%", size: 80, duration: 25, delay: 2.1, x: [0, -25, 25, 0], y: [0, 35, -40, 0] },
-    { id: 12, left: "65%", top: "88%", size: 70, duration: 27, delay: 0.3, x: [0, 30, -30, 0], y: [0, -30, 30, 0] }
+    { id: 9, left: "58%", top: "8%", size: 90, duration: 22, delay: 0.9, x: [0, -45, 25, 0], y: [0, 45, -25, 0] }
   ];
 
-  // Highly engaging floating photo nodes that drift smoothly in non-linear, unpredictable organic motions
-  const floatingPhotoNodes = useMemo(() => {
+  // Highly engaging floating comic cloud of elements drifting smoothly
+  const floatingComicElements = useMemo(() => {
     if (employees.length === 0) return [];
-    const pool = employees.filter(e => e.photoLink && !e.photoLink.includes('none'));
-    const sourceList = pool.length > 5 ? pool : employees;
     
-    const nodes = [];
-    const count = Math.min(15, sourceList.length || 1);
+    const pool = employees.filter(e => e.photoLink && !e.photoLink.includes('none'));
+    const sourceList = pool.length > 0 ? pool : employees;
+    const elements = [];
+    const count = Math.min(10, sourceList.length);
     for (let i = 0; i < count; i++) {
-      const emp = sourceList[i % sourceList.length];
+      const emp = sourceList[i];
+      const type = i % 2 === 0 ? 'speech-bubble' : 'rectangle-card';
       
-      const startX = 5 + (i * 90 / count) + (Math.sin(i) * 3); 
-      const startY = 12 + ((i * 17) % 65); 
+      const startX = 5 + (i * 90 / count) + (Math.sin(i * 1.5) * 4); 
+      const startY = 15 + ((i * 19) % 55); 
       
-      const dx = [0, (Math.sin(i) * 45), (Math.cos(i) * -40), 0];
-      const dy = [0, (Math.cos(i) * -45), (Math.sin(i) * 40), 0];
-      const duration = 24 + (i * 3) % 20; 
-      const delay = (i * 1.3) % 4;
-      const size = 55 + (i * 7) % 35; 
-      const borderColor = i % 2 === 0 ? '#65bc7b' : '#8247e5';
+      const dx = [0, (Math.sin(i * 1.2) * 50), (Math.cos(i * 0.8) * -45), 0];
+      const dy = [0, (Math.cos(i * 1.2) * -50), (Math.sin(i * 0.8) * 45), 0];
+      const duration = 28 + (i * 4) % 18; 
+      const delay = (i * 1.5) % 5;
+      
+      let rawQuote = emp.quote || '';
+      if (checkIsNoComment(rawQuote)) {
+        rawQuote = "Happy to be part of Polygon Technology Bangladesh!";
+      }
+      let quoteSnippet = rawQuote;
+      if (quoteSnippet.length > 55) {
+        quoteSnippet = quoteSnippet.substring(0, 52) + "...";
+      }
 
-      nodes.push({
-        id: `drift-${emp.id}-${i}`,
+      elements.push({
+        id: `comic-${emp.id}-${i}`,
         employee: emp,
-        style: {
-          left: `${startX}%`,
-          top: `${startY}%`,
-          width: size,
-          height: size,
-        },
-        animate: {
-          x: dx,
-          y: dy,
-          rotate: [0, i % 2 === 0 ? 30 : -35, i % 2 === 0 ? -30 : 35, 0],
-          scale: [1, 1.1, 0.9, 1]
-        },
+        type,
+        quoteSnippet,
+        startX,
+        startY,
+        dx,
+        dy,
         duration,
-        delay,
-        borderColor
+        delay
       });
     }
-    return nodes;
+    return elements;
   }, [employees]);
 
   // Dynamic department slices for Employee Distribution Chart (Chart 1)
@@ -289,7 +314,7 @@ export default function Home() {
     });
   }, [employees]);
 
-  // Centralised Sentiment/Quote Categorization Engine (Chart 2)
+  // Centralised Sentiment/Quote Categorization Engine (Chart 2) with ROBUST MATCHING
   const sentimentSlices = useMemo(() => {
     const total = employees.length || 1;
     
@@ -303,25 +328,14 @@ export default function Home() {
     };
 
     employees.forEach(emp => {
-      const quote = (emp.quote || '').trim().toLowerCase();
-      
-      const isNoComment = !quote || 
-                          quote === 'no comments' || 
-                          quote === 'no comment' || 
-                          quote === 'no comments.' || 
-                          quote === 'no comment.' || 
-                          quote === 'none' || 
-                          quote === 'none.' ||
-                          quote === 'na' || 
-                          quote === 'n/a' || 
-                          quote === 'n/a.' || 
-                          quote.includes('no comment') ||
-                          quote.includes('no comments');
+      const isNoComment = checkIsNoComment(emp.quote);
 
       if (isNoComment) {
         countsMap['No Comments']++;
         return;
       }
+
+      const quote = (emp.quote || '').trim().toLowerCase();
 
       // Check positive culture keywords first
       const positiveKeywords = ['nice', 'friendly', 'good', 'great', 'culture', 'environment', 'atmosphere', 'people', 'warm', 'supportive'];
@@ -386,26 +400,14 @@ export default function Home() {
     if (!selectedCategory) return [];
     
     return employees.filter(emp => {
-      const quote = (emp.quote || '').trim().toLowerCase();
-      
-      const isNoComment = !quote || 
-                          quote === 'no comments' || 
-                          quote === 'no comment' || 
-                          quote === 'no comments.' || 
-                          quote === 'no comment.' || 
-                          quote === 'none' || 
-                          quote === 'none.' ||
-                          quote === 'na' || 
-                          quote === 'n/a' || 
-                          quote === 'n/a.' || 
-                          quote.includes('no comment') ||
-                          quote.includes('no comments');
+      const isNoComment = checkIsNoComment(emp.quote);
       
       let assignedCategory = 'Others';
       
       if (isNoComment) {
         assignedCategory = 'No Comments';
       } else {
+        const quote = (emp.quote || '').trim().toLowerCase();
         const positiveKeywords = ['nice', 'friendly', 'good', 'great', 'culture', 'environment', 'atmosphere', 'people', 'warm', 'supportive'];
         const fintechKeywords = ['tech', 'code', 'blockchain', 'polygon', 'system', 'build', 'engineering', 'platform', 'payment', 'ledger'];
         const growthKeywords = ['learn', 'grow', 'intern', 'junior', 'senior', 'mentor', 'guidance', 'career', 'roadmap', 'pathway'];
@@ -426,23 +428,14 @@ export default function Home() {
     });
   }, [employees, selectedCategory]);
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   return (
     <div id="home-page-root" className="min-h-screen bg-[#0b0e14] relative overflow-hidden">
       
-      {/* Cinematic Ambient Backdrop Wrapper with video feed and geometric floating hex outlines */}
+      {/* Cinematic Ambient Backdrop Wrapper */}
       <div className="absolute inset-x-0 top-0 h-[850px] overflow-hidden pointer-events-none z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0b0e14]/60 to-[#0b0e14] z-10" />
         
-        {/* Cinematic Video Background Muted, Mapped loop */}
+        {/* Cinematic Video Background */}
         <video 
           src="/hero-bg.mp4" 
           autoPlay 
@@ -491,42 +484,62 @@ export default function Home() {
         <div className="absolute w-[400px] h-[400px] bg-[#65bc7b]/8 top-[10%] right-[15%] filter blur-[120px]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]" />
 
-        {/* Dynamic organically floating photo nodes drifting gracefully */}
+        {/* Comic Cloud of elements drifting smoothly */}
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-auto">
-          {floatingPhotoNodes.map((node) => (
+          {floatingComicElements.map((el) => (
             <motion.div
-              key={node.id}
-              className="absolute rounded-full border-2 bg-[#131722]/85 overflow-hidden shadow-2xl flex items-center justify-center cursor-pointer hover:border-[#65bc7b] hover:scale-125 hover:z-30 transition-transform duration-300 group"
+              key={el.id}
+              className="absolute z-20 cursor-pointer select-none group"
               style={{
-                ...node.style,
-                borderColor: node.borderColor,
+                left: `${el.startX}%`,
+                top: `${el.startY}%`,
               }}
-              animate={node.animate}
+              animate={{
+                x: el.dx,
+                y: el.dy,
+                rotate: [0, el.delay % 2 === 0 ? 3 : -3, el.delay % 2 === 0 ? -3 : 3, 0],
+              }}
               transition={{
-                duration: node.duration,
+                duration: el.duration,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: node.delay,
+                delay: el.delay,
               }}
               onClick={() => {
-                setSelectedBot(node.employee);
+                setSelectedBot(el.employee);
                 setBotImageError(false);
               }}
             >
-              <img 
-                src={node.employee.photoLink && !node.employee.photoLink.includes('none') ? (node.employee.photoLink.startsWith('http') ? node.employee.photoLink : `/faces/${node.employee.photoLink}`) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'} 
-                alt={node.employee.name} 
-                className="w-full h-full object-cover filter grayscale contrast-125 group-hover:grayscale-0 group-hover:scale-110 transition-all duration-300 pointer-events-none" 
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150';
-                }}
-              />
-              <div className="absolute inset-0 bg-[#65bc7b]/5 mix-blend-color pointer-events-none" />
-              
-              {/* Floating micro tag labels */}
-              <div className="absolute inset-x-0 bottom-0 py-0.5 bg-black/75 text-center text-[7px] font-mono text-white/50 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest truncate max-w-full">
-                {node.employee.name.split(' ')[0]}
-              </div>
+              {el.type === 'speech-bubble' ? (
+                /* Comic Speech Bubble Layer */
+                <div className="bg-[#131722]/80 backdrop-blur-md border-2 border-white/60 hover:border-[#65bc7b] p-4 rounded-2xl max-w-[220px] shadow-2xl relative transition-all duration-300 hover:scale-105 active:scale-95 text-left">
+                  <p className="text-white/80 text-xs font-bold leading-relaxed italic">
+                    "{el.quoteSnippet}"
+                  </p>
+                  <p className="text-[#65bc7b] text-[9px] font-mono font-black uppercase tracking-wider mt-2">
+                    — {el.employee.name.split(' ')[0]}
+                  </p>
+                  <div className="absolute bottom-[-8px] left-6 w-3 h-3 bg-[#131722] border-r-2 border-b-2 border-white/60 group-hover:border-[#65bc7b] rotate-45" />
+                </div>
+              ) : (
+                /* Floating Comic Rectangle Card Layer */
+                <div className="bg-[#131722]/85 backdrop-blur-md border-2 border-white/60 hover:border-[#65bc7b] p-2.5 rounded-xl flex gap-3 items-center shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 max-w-[240px]">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                    <img 
+                      src={el.employee.photoLink && !el.employee.photoLink.includes('none') ? (el.employee.photoLink.startsWith('http') ? el.employee.photoLink : `/faces/${el.employee.photoLink}`) : 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150'} 
+                      alt={el.employee.name} 
+                      className="w-full h-full object-cover filter grayscale hover:grayscale-0 transition-all duration-300 pointer-events-none" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150';
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-black text-xs leading-none truncate">{el.employee.name}</p>
+                    <p className="text-white/50 text-[9px] font-mono uppercase tracking-wider mt-1 truncate">{el.employee.role}</p>
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
@@ -559,21 +572,22 @@ export default function Home() {
             Meet our people and learn about our culture.
           </motion.p>
 
-          <div className="flex flex-col sm:flex-row gap-6">
-             <Link
-                to="/directory"
-                className="group flex items-center justify-center gap-3 bg-[#65bc7b] text-[#0b0e14] px-10 py-5 rounded-[2.5rem] font-black text-lg transition-all hover:scale-105 shadow-2xl shadow-[#65bc7b]/20"
-              >
-                View Full Directory
-                <Users size={20} />
-              </Link>
-              <button 
-                onClick={handleMeetBot}
-                className="group flex items-center justify-center gap-3 bg-white/5 border border-white/10 text-white px-10 py-5 rounded-[2.5rem] font-black text-lg transition-all hover:bg-white/10"
-              >
-                Meet a PolyBot
-                <Bot size={24} />
-              </button>
+          {/* Squeezed and Vertically Stacked CTA Action Triggers */}
+          <div className="flex flex-col gap-4 w-full max-w-xs relative z-30">
+            <button 
+              onClick={handleMeetBot}
+              className="group flex items-center justify-center gap-3 bg-[#65bc7b]/10 backdrop-blur-md border border-[#65bc7b]/30 text-[#65bc7b] hover:bg-[#65bc7b]/20 px-6 py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-300 hover:scale-105"
+            >
+              <Bot size={18} />
+              Meet a PolyBot
+            </button>
+            <Link
+              to="/directory"
+              className="group flex items-center justify-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 text-white/80 hover:bg-white/10 px-6 py-4 rounded-2xl font-bold text-sm tracking-wide transition-all duration-300 hover:scale-105 text-center"
+            >
+              <Users size={18} />
+              View Full Directory
+            </Link>
           </div>
         </div>
       </div>
@@ -597,7 +611,7 @@ export default function Home() {
             {/* Hyper-Minimalist Tag replacing heavy Core Personnel title */}
             <div className="inline-block bg-[#131722] border border-white/5 px-6 py-2.5 rounded-full shadow-lg">
                 <span className="text-sm font-mono font-black text-[#65bc7b] uppercase tracking-[0.35em]">
-                  Polybots
+                  Employees
                 </span>
             </div>
         </div>
@@ -609,10 +623,10 @@ export default function Home() {
             </div>
         ) : (
             <>
-                {/* Horizontal Auto-scrolling Interlocking Carousel wrapper */}
+                {/* Horizontal Auto-scrolling Interlocking Carousel wrapper with Locked Width Cards */}
                 <div 
                   id="featured-talent-carousel-container"
-                  className="relative w-full overflow-hidden"
+                  className="relative w-full overflow-hidden text-center"
                   onMouseEnter={() => setIsCarouselHovered(true)}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -625,15 +639,22 @@ export default function Home() {
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                     onTouchMove={handleTouchMove}
-                    className="flex overflow-x-auto gap-8 pb-8 snap-x snap-mandatory cursor-grab active:cursor-grabbing scrollbar-none scroll-smooth select-none"
+                    className="flex overflow-x-auto gap-8 pb-8 snap-x snap-mandatory cursor-grab active:cursor-grabbing scrollbar-none scroll-smooth select-none items-stretch"
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                   >
-                    {employees.map((emp, idx) => (
+                    {displayEmployees.map((emp, idx) => (
                       <div 
-                        key={emp.id} 
-                        className="min-w-[280px] sm:min-w-[310px] snap-center flex-shrink-0"
+                        key={`slide-${emp.id}-${idx}`}
+                        className="w-[280px] md:w-[320px] shrink-0 transform hover:scale-[1.02] transition-transform duration-300"
                       >
-                        <EmployeeCard employee={emp} index={idx} />
+                        <EmployeeCard 
+                          employee={emp} 
+                          index={idx} 
+                          onClick={() => {
+                            setSelectedBot(emp);
+                            setBotImageError(false);
+                          }}
+                        />
                       </div>
                     ))}
                   </div>
@@ -666,7 +687,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Side-by-Side Dual Donut Charts Cleaned and Perfectly Symmetrical Grid */}
+        {/* Side-by-Side Dual Donut Charts Perfectly Symmetrical Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-stretch max-w-5xl mx-auto">
           
           {/* Chart 1: Employee Distribution Chart */}
@@ -710,9 +731,9 @@ export default function Home() {
                 })}
               </svg>
 
-              {/* Accentuated Milestone text display upgraded is highly visible at a glance */}
+              {/* Accentuated Milestone text display */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none">Departments</span>
+                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none font-mono">Departments</span>
                 <span className="text-5xl md:text-6xl font-black text-[#65bc7b] leading-none mt-2.5">{departmentSlices.length}</span>
                 <span className="text-[9px] font-mono text-white/40 mt-1.5 uppercase tracking-wider font-bold">Groups</span>
               </div>
@@ -739,7 +760,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Chart 2: Sentiment Proportions Chart (Update specific header to "Categorized Quotes") */}
+          {/* Chart 2: Sentiment Proportions Chart */}
           <div id="stats-categories-standalone-container" className="bg-[#131722] border border-white/5 rounded-[3rem] p-10 md:p-14 shadow-2xl relative overflow-hidden flex flex-col items-center justify-between min-h-[460px]">
             <div className="absolute top-0 right-0 w-48 h-48 bg-[#65bc7b]/5 blur-[80px] pointer-events-none" />
             
@@ -781,9 +802,9 @@ export default function Home() {
                 })}
               </svg>
 
-              {/* Accentuated Milestone text display upgraded is highly visible at a glance */}
+              {/* Accentuated Milestone text display */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none">Feedback</span>
+                <span className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none font-mono">Feedback</span>
                 <span className="text-5xl md:text-6xl font-black text-[#8247e5] leading-none mt-2.5">{employees.length}</span>
                 <span className="text-[9px] font-mono text-white/40 mt-1.5 uppercase tracking-wider font-bold">Total Quotes</span>
               </div>
@@ -922,7 +943,7 @@ export default function Home() {
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-3xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[420px] aspect-auto md:aspect-[16/10] lg:aspect-[16/9] z-50"
+              className="relative w-full max-w-3xl bg-[#131722] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row min-h-[420px] aspect-auto md:aspect-[16/9] z-50"
             >
               {/* Left Column: Portrait image or Sarcastic Bengali Roast Fallback */}
               <div className="md:w-[35%] relative bg-[#090b10] border-b md:border-b-0 md:border-r border-white/5 flex flex-col items-center justify-center p-8 select-none shrink-0">
@@ -936,11 +957,9 @@ export default function Home() {
                     />
                   </div>
                 ) : (
-                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] border-2 border-[#ff3e6c]/35 flex flex-col items-center justify-center p-4 text-center">
-                    <span className="px-2 py-0.5 bg-[#ff3e6c]/10 rounded text-[7px] font-mono font-black text-[#ff3e6c] uppercase tracking-wider mb-2">[ DATA_EMPTY ]</span>
-                    {/* Fallback Bengali corporate tech roasts matching alternatingly based on employee indexes */}
-                    <p className="text-white/85 font-mono text-[9px] leading-tight italic">
-                      "{getRoastForEmployee(selectedBot.id)}"
+                  <div className="w-40 h-40 md:w-44 md:h-44 rounded-md bg-gradient-to-br from-[#ff3e6c]/15 to-[#0b0e14] border-2 border-[#ff3e6c]/35 flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-white/85 font-mono text-[10px] leading-tight italic">
+                      "{getRoastForEmployee(employees.findIndex(e => e.id === selectedBot.id))}"
                     </p>
                   </div>
                 )}
@@ -965,35 +984,30 @@ export default function Home() {
                 <div className="flex flex-col gap-6">
                   {/* Compact code tag chip for Name at the very top */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 bg-[#65bc7b]/10 border border-[#65bc7b]/20 rounded-md text-[9px] font-mono font-bold text-[#65bc7b] uppercase tracking-wide">
-                      OP_TAG: {selectedBot.name}
-                    </span>
-                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-[9px] font-mono font-medium text-white/50 uppercase tracking-widest">
-                      ID_NODE: {selectedBot.id}
+                    <span className="px-2.5 py-1 bg-[#65bc7b]/10 border border-[#65bc7b]/20 rounded-md text-[10px] font-mono font-bold text-[#65bc7b] uppercase tracking-wide">
+                      {selectedBot.name}
                     </span>
                   </div>
 
                   {/* Designated department and description lines below with balanced layout margins */}
                   <div>
-                    <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight uppercase leading-none">
+                    <h3 className="text-3xl md:text-3xl font-black text-white tracking-tight uppercase leading-none">
                       {selectedBot.role}
                     </h3>
-                    <p className="text-[#65bc7b] text-xs font-black uppercase tracking-widest mt-2">
+                    <p className="text-[#65bc7b] text-xs font-black uppercase tracking-widest mt-2 font-mono">
                       {selectedBot.department} DEPARTMENT
                     </p>
                   </div>
 
                   {/* Massively sized employee quote block taking up the majority of the landscape modal center */}
                   <div className="p-8 bg-[#0b0e14]/65 border border-white/5 rounded-3xl relative overflow-hidden">
-                    <div className="absolute top-2 left-3 font-mono text-[8px] text-[#65bc7b]/40 uppercase tracking-widest">[ SENTIMENT_STATEMENT ]</div>
-                    <p className="text-2xl md:text-3xl font-black text-white leading-relaxed italic tracking-tight text-left pt-2">
+                    <p className="text-2xl md:text-3xl font-black text-white leading-relaxed italic tracking-tight text-left">
                       "{selectedBot.quote || 'No comment recorded.'}"
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
-                  <span className="font-mono text-[8px] text-white/30 uppercase tracking-widest">Widescreen Polybot v2.5</span>
+                <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-end">
                   <button 
                     onClick={() => setSelectedBot(null)}
                     className="bg-[#65bc7b] text-[#0b0e14] px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all"
@@ -1036,7 +1050,7 @@ export default function Home() {
                 </div>
                 <button 
                   onClick={() => setSelectedCategory(null)}
-                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors"
+                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full text-white transition-colors animate-fade-in"
                 >
                   <X size={18} />
                 </button>

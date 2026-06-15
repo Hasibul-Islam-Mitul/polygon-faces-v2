@@ -13,28 +13,23 @@ interface EmployeeCardProps {
   employee: Employee;
   index: number;
   key?: string | number;
+  onClick?: () => void;
 }
 
 const BENGALI_ROASTS = [
   "Chhobi chara dynamic UI? Eto bhalo coding jani na bhai!",
-  "Chobi tulen nai? Back-end database bodhoy apnakei khujche!",
-  "Chhobi tola ki strictly confidential naki bhai? senti khelam :))",
+  "Frame khali! Back-end database bodhoy apnake khujche!",
+  "Chhobi tola ki strictly confidential naki bhai? :))",
   "Chhobi dile crash khabe na, crush khabe!",
   "Chhobi chara profile dekhte thiki database error er moto lage!",
   "Chhobi chara employee? System-e to compile korche na!"
 ];
 
-const getRoastForEmployee = (id: string | number) => {
-  const str = String(id);
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % BENGALI_ROASTS.length;
-  return BENGALI_ROASTS[index];
+const getRoastForEmployee = (index: number) => {
+  return BENGALI_ROASTS[index % BENGALI_ROASTS.length];
 };
 
-export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
+export default function EmployeeCard({ employee, index, onClick }: EmployeeCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -61,8 +56,8 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
       "linear-gradient(135deg, #1b4d3e 0%, #0b0e14 60%, #65bc7b 100%)",
       "linear-gradient(135deg, #070a0e 0%, #0f172a 50%, #65bc7b 100%)"
     ];
-    const index = Math.abs(hash) % gradients.length;
-    return gradients[index];
+    const indexStr = Math.abs(hash) % gradients.length;
+    return gradients[indexStr];
   };
 
   const ImageContent = ({ className, showInitials = false }: { className: string, showInitials?: boolean }) => {
@@ -72,7 +67,7 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
       : `/faces/${photoLink}`;
 
     if (imageError || !photoLink || imgSrc.endsWith('undefined') || imgSrc.endsWith('/faces/')) {
-      const roast = getRoastForEmployee(employee.id);
+      const roast = getRoastForEmployee(index);
       return (
         <div 
           id={`avatar-card-container-${employee.id}`}
@@ -125,7 +120,7 @@ export default function EmployeeCard({ employee, index }: EmployeeCardProps) {
         viewport={{ once: true }}
         transition={{ duration: 0.5, delay: (index % 8) * 0.05 }}
         whileHover={{ y: -10 }}
-        onClick={() => setIsModalOpen(true)}
+        onClick={onClick || (() => setIsModalOpen(true))}
         className="group relative bg-[#131722] border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl cursor-pointer"
       >
         <div className="aspect-[4/5] relative overflow-hidden">
